@@ -1,0 +1,28 @@
+# IntelliJ
+.idea/
+*.iml
+
+# Gradle
+.gradle/
+build/
+out/
+
+# OS (Mac)
+.DS_Store
+
+# Logs
+*.log
+
+# Database (VERY IMPORTANT)
+*.db
+*.sqlite
+
+# Local config
+local.properties
+
+# Java
+*.class
+
+# Temp files
+*.tmp
+*.swp
