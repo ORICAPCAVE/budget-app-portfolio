@@ -52,11 +52,9 @@
             </GridPane>
 
             <HBox spacing="10.0">
-                <Button text="Add Income" />
-                <Button text="Add Expense" />
-                <Button text="Add Debt" />
-                <Button text="Run Payoff Report" />
-                <Button text="Delete Selected Expense" onAction="#handleDeleteExpense"/>
+                <Button text="Add Income" onAction="#handleOpenIncomeWindow"/>
+                <Button text="Add Debt" onAction="#handleOpenDebtWindow"/>
+                <Button text="Run Payoff Report" onAction="#handleRunPayoffReport"/>
             </HBox>
 
             <VBox spacing="8.0" style="-fx-background-color: #f8fafc; -fx-padding: 16; -fx-border-color: #d9e2ec; -fx-border-radius: 10; -fx-background-radius: 10;">
@@ -104,6 +102,19 @@
                         <TableColumn fx:id="recurrenceColumn" text="Recurrence"/>
                     </columns>
                 </TableView>
+            </VBox>
+            <VBox spacing="8.0" style="-fx-background-color: #f8fafc; -fx-padding: 16;">
+                <Label text="Income" style="-fx-font-weight: bold;"/>
+
+                <TableView fx:id="incomeTable">
+                    <columns>
+                        <TableColumn fx:id="incomeSourceColumn" text="Source"/>
+                        <TableColumn fx:id="incomeAmountColumn" text="Amount"/>
+                        <TableColumn fx:id="incomeRecurrenceColumn" text="Recurrence"/>
+                    </columns>
+                </TableView>
+
+                <Button text="Delete Selected Income" onAction="#handleDeleteIncome"/>
             </VBox>
         </VBox>
     </center>

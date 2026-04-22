@@ -1,17 +1,23 @@
 package com.budgetapp.ui;
 
 import com.budgetapp.dao.ExpenseDao;
+import com.budgetapp.dao.IncomeDao;
 import com.budgetapp.model.Expense;
+import com.budgetapp.model.Income;
 import com.budgetapp.model.Recurrence;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
-
+import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.util.List;
 
+import javafx.geometry.Insets;
 public class DashboardController {
 
     // ===== Existing Labels =====
@@ -31,10 +37,16 @@ public class DashboardController {
     @FXML private TableColumn<Expense, String> nameColumn;
     @FXML private TableColumn<Expense, BigDecimal> amountColumn;
     @FXML private TableColumn<Expense, Recurrence> recurrenceColumn;
+    @FXML private TableView<Income> incomeTable;
+    @FXML private TableColumn<Income, String> incomeSourceColumn;
+    @FXML private TableColumn<Income, BigDecimal> incomeAmountColumn;
+    @FXML private TableColumn<Income, Recurrence> incomeRecurrenceColumn;
+
+    private final ObservableList<Income> incomes = FXCollections.observableArrayList();
 
     private final ObservableList<Expense> expenses = FXCollections.observableArrayList();
     private final ExpenseDao expenseDao = new ExpenseDao();
-
+    private final IncomeDao incomeDao = new IncomeDao();
 
     @FXML
     public void initialize() {
@@ -55,11 +67,34 @@ public class DashboardController {
         recurrenceColumn.setCellValueFactory(data ->
                 new javafx.beans.property.SimpleObjectProperty<>(data.getValue().getRecurrence()));
 
-        // 👇 LOAD FROM DATABASE
         expenses.addAll(expenseDao.findAll());
 
         expenseTable.setItems(expenses);
+        incomeSourceColumn.setCellValueFactory(data ->
+                new javafx.beans.property.SimpleStringProperty(data.getValue().getSource()));
 
+        incomeAmountColumn.setCellValueFactory(data ->
+                new javafx.beans.property.SimpleObjectProperty<>(data.getValue().getAmount()));
+
+        incomeRecurrenceColumn.setCellValueFactory(data ->
+                new javafx.beans.property.SimpleObjectProperty<>(data.getValue().getRecurrence()));
+
+        incomes.addAll(incomeDao.findAll());
+        incomeTable.setItems(incomes);
+
+        updateTotals();
+    }
+    @FXML
+    private void handleDeleteIncome() {
+        Income selected = incomeTable.getSelectionModel().getSelectedItem();
+
+        if (selected == null) {
+            showAlert("Select an income entry to delete");
+            return;
+        }
+
+        incomeDao.delete(selected.getId());
+        incomes.remove(selected);
         updateTotals();
     }
 
@@ -98,6 +133,7 @@ public class DashboardController {
         recurrenceBox.getSelectionModel().clearSelection();
         dueDatePicker.setValue(null);
     }
+
     @FXML
     private void handleDeleteExpense() {
         Expense selected = expenseTable.getSelectionModel().getSelectedItem();
@@ -106,14 +142,152 @@ public class DashboardController {
             showAlert("Select an expense to delete");
             return;
         }
+
         expenseDao.delete(selected.getId());
         expenses.remove(selected);
         updateTotals();
     }
 
+    @FXML
+    private void handleOpenIncomeWindow() {
+        Stage stage = new Stage();
+        stage.setTitle("Add Income");
+
+        Label sourceLabel = new Label("Income Source");
+        TextField sourceField = new TextField();
+        sourceField.setPromptText("Paycheck, Side Job, Pension");
+
+        Label amountLabel = new Label("Amount");
+        TextField incomeAmountField = new TextField();
+        incomeAmountField.setPromptText("Amount");
+
+        Label recurrenceLabel = new Label("Frequency");
+        ComboBox<Recurrence> incomeRecurrenceBox = new ComboBox<>();
+        incomeRecurrenceBox.getItems().addAll(Recurrence.values());
+
+        Button saveButton = new Button("Save Income");
+
+        saveButton.setOnAction(e -> {
+            String source = sourceField.getText();
+            Recurrence recurrence = incomeRecurrenceBox.getValue();
+
+            BigDecimal amount;
+            try {
+                amount = new BigDecimal(incomeAmountField.getText());
+            } catch (Exception ex) {
+                showAlert("Invalid income amount");
+                return;
+            }
+
+            if (source == null || source.isBlank() || recurrence == null) {
+                showAlert("Fill all income fields");
+                return;
+            }
+
+            Income income = new Income();
+            income.setSource(source);
+            income.setAmount(amount);
+            income.setRecurrence(recurrence);
+
+            incomeDao.save(income);
+            incomes.add(income);
+            updateTotals();
+
+            stage.close();
+        });
+
+        VBox root = new VBox(10,
+                sourceLabel, sourceField,
+                amountLabel, incomeAmountField,
+                recurrenceLabel, incomeRecurrenceBox,
+                saveButton
+        );
+        root.setPadding(new Insets(15));
+
+        Scene scene = new Scene(root, 320, 260);
+        stage.setScene(scene);
+        stage.show();
+    }
+    @FXML
+    private void handleOpenDebtWindow() {
+        Stage stage = new Stage();
+        stage.setTitle("Add Debt");
+
+        Label nameLabel = new Label("Debt Name");
+        TextField debtNameField = new TextField();
+        debtNameField.setPromptText("Credit Card, Car Loan");
+
+        Label balanceLabel = new Label("Balance");
+        TextField balanceField = new TextField();
+        balanceField.setPromptText("Current Balance");
+
+        Label paymentLabel = new Label("Monthly Payment");
+        TextField paymentField = new TextField();
+        paymentField.setPromptText("Monthly Payment");
+
+        Button saveButton = new Button("Save Debt");
+
+        saveButton.setOnAction(e -> {
+            String debtName = debtNameField.getText();
+
+            BigDecimal balance;
+            BigDecimal payment;
+
+            try {
+                balance = new BigDecimal(balanceField.getText());
+                payment = new BigDecimal(paymentField.getText());
+            } catch (Exception ex) {
+                showAlert("Invalid debt numbers");
+                return;
+            }
+
+            if (debtName == null || debtName.isBlank()) {
+                showAlert("Fill all debt fields");
+                return;
+            }
+
+            // Later:
+            // Debt debt = new Debt();
+            // debt.setName(debtName);
+            // debt.setBalance(balance);
+            // debt.setMonthlyPayment(payment);
+            // debtDao.save(debt);
+
+            showAlert("Debt save wiring is next.");
+            stage.close();
+        });
+
+        VBox root = new VBox(10,
+                nameLabel, debtNameField,
+                balanceLabel, balanceField,
+                paymentLabel, paymentField,
+                saveButton
+        );
+        root.setPadding(new Insets(15));
+
+        Scene scene = new Scene(root, 320, 240);
+        stage.setScene(scene);
+        stage.show();
+    }
+
+    @FXML
+    private void handleRunPayoffReport() {
+        showAlert("Payoff report is not implemented yet.");
+    }
+
     // ===== CORE LOGIC (important) =====
     private void updateTotals() {
+        BigDecimal totalMonthlyIncome = BigDecimal.ZERO;
         BigDecimal totalMonthlyExpenses = BigDecimal.ZERO;
+        BigDecimal totalMonthlyDebtPayments = BigDecimal.ZERO; // placeholder for later
+
+        List<Income> incomes = incomeDao.findAll();
+
+        for (Income income : incomes) {
+            totalMonthlyIncome = totalMonthlyIncome.add(
+                    convertToMonthly(income.getAmount(), income.getRecurrence())
+            );
+        }
 
         for (Expense e : expenses) {
             totalMonthlyExpenses = totalMonthlyExpenses.add(
@@ -121,7 +295,14 @@ public class DashboardController {
             );
         }
 
+        BigDecimal remainingCash = totalMonthlyIncome
+                .subtract(totalMonthlyExpenses)
+                .subtract(totalMonthlyDebtPayments);
+
+        incomeValueLabel.setText("$" + totalMonthlyIncome.setScale(2, RoundingMode.HALF_UP));
         expensesValueLabel.setText("$" + totalMonthlyExpenses.setScale(2, RoundingMode.HALF_UP));
+        debtPaymentsValueLabel.setText("$" + totalMonthlyDebtPayments.setScale(2, RoundingMode.HALF_UP));
+        remainingCashValueLabel.setText("$" + remainingCash.setScale(2, RoundingMode.HALF_UP));
     }
 
     private BigDecimal convertToMonthly(BigDecimal amount, Recurrence recurrence) {
