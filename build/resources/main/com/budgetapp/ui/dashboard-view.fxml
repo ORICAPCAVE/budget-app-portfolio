@@ -94,7 +94,7 @@
 
                     <VBox spacing="4">
                         <Label text=" "/>
-                        <Button text="Add Expense" onAction="#handleAddExpense"/>
+                        <Button text="Add Expense" onAction="#handleOpenExpenseWindow"/>
                     </VBox>
 
                     <VBox spacing="4">

@@ -7,6 +7,10 @@ import com.budgetapp.model.*;
 import com.budgetapp.service.DebtCalculationService;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
+import com.budgetapp.model.ExpenseCategory;
+import javafx.scene.control.cell.TextFieldTableCell;
+import javafx.scene.layout.HBox;
+import javafx.util.StringConverter;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -64,6 +68,20 @@ public class DashboardController {
     private final IncomeDao incomeDao = new IncomeDao();
     private final DebtDao debtDao = new DebtDao();
     private final ObservableList<Debt> debts = FXCollections.observableArrayList();
+    private final StringConverter<BigDecimal> bigDecimalConverter = new StringConverter<>() {
+        @Override
+        public String toString(BigDecimal value) {
+            return value == null ? "" : value.toPlainString();
+        }
+
+        @Override
+        public BigDecimal fromString(String text) {
+            if (text == null || text.trim().isEmpty()) {
+                throw new IllegalArgumentException("Value cannot be empty");
+            }
+            return new BigDecimal(text.trim());
+        }
+    };
     @FXML
     public void initialize() {
 
@@ -148,10 +166,62 @@ public class DashboardController {
         debts.clear();
         debts.addAll(debtDao.findAll());
         debtTable.setItems(debts);
+        debtTable.setEditable(true);
 
         System.out.println("Debt table initialized. Loaded debts = " + debts.size());
 
         updateTotals();
+        debtAmountColumn.setCellFactory(TextFieldTableCell.forTableColumn(bigDecimalConverter));
+        debtRateColumn.setCellFactory(TextFieldTableCell.forTableColumn(bigDecimalConverter));
+        debtMinPaymentColumn.setCellFactory(TextFieldTableCell.forTableColumn(bigDecimalConverter));
+
+        debtAmountColumn.setOnEditCommit(event -> {
+            Debt debt = event.getRowValue();
+            BigDecimal oldValue = event.getOldValue();
+
+            try {
+                debt.setAmount(event.getNewValue());
+                debtDao.save(debt);
+                refreshDebts();
+                updateTotals();
+            } catch (Exception e) {
+                debt.setAmount(oldValue);
+                showAlert("Invalid debt amount");
+                refreshDebts();
+            }
+        });
+
+        debtRateColumn.setOnEditCommit(event -> {
+            Debt debt = event.getRowValue();
+            BigDecimal oldValue = event.getOldValue();
+
+            try {
+                debt.setInterestRate(event.getNewValue());
+                debtDao.save(debt);
+                refreshDebts();
+                updateTotals();
+            } catch (Exception e) {
+                debt.setInterestRate(oldValue);
+                showAlert("Invalid interest rate");
+                refreshDebts();
+            }
+        });
+
+        debtMinPaymentColumn.setOnEditCommit(event -> {
+            Debt debt = event.getRowValue();
+            BigDecimal oldValue = event.getOldValue();
+
+            try {
+                debt.setMinimumPayment(event.getNewValue());
+                debtDao.save(debt);
+                refreshDebts();
+                updateTotals();
+            } catch (Exception e) {
+                debt.setMinimumPayment(oldValue);
+                showAlert("Invalid minimum payment");
+                refreshDebts();
+            }
+        });
     }
     @FXML
     private void handleDeleteIncome() {
@@ -175,7 +245,7 @@ public class DashboardController {
 
         BigDecimal amount;
         try {
-            amount = new BigDecimal(amountField.getText());
+            amount = new BigDecimal(amountField.getText().trim());
         } catch (Exception e) {
             showAlert("Invalid amount");
             return;
@@ -286,60 +356,70 @@ public class DashboardController {
         TextField nameField = new TextField();
         nameField.setPromptText("Credit Card, Car Loan");
 
-        Label amountLabel = new Label("Payment Amount");
+        Label amountLabel = new Label("Amount");
         TextField debtAmountField = new TextField();
-        debtAmountField.setPromptText("Amount");
+        debtAmountField.setPromptText("Balance amount");
+
+        Label rateLabel = new Label("Interest Rate");
+        TextField debtRateField = new TextField();
+        debtRateField.setPromptText("APR, e.g. 18.99");
+
+        Label minPaymentLabel = new Label("Minimum Payment");
+        TextField debtMinPaymentField = new TextField();
+        debtMinPaymentField.setPromptText("Minimum payment");
 
         Label recurrenceLabel = new Label("Frequency");
         ComboBox<Recurrence> debtRecurrenceBox = new ComboBox<>();
         debtRecurrenceBox.getItems().addAll(Recurrence.values());
 
         Button saveButton = new Button("Save Debt");
+        Button cancelButton = new Button("Cancel");
+        cancelButton.setOnAction(e -> stage.close());
 
         saveButton.setOnAction(e -> {
             String name = nameField.getText();
             Recurrence recurrence = debtRecurrenceBox.getValue();
 
             BigDecimal amount;
+            BigDecimal interestRate;
+            BigDecimal minimumPayment;
+
             try {
-                amount = new BigDecimal(debtAmountField.getText());
+                amount = new BigDecimal(debtAmountField.getText().trim());
+                interestRate = new BigDecimal(debtRateField.getText().trim());
+                minimumPayment = new BigDecimal(debtMinPaymentField.getText().trim());
             } catch (Exception ex) {
-                showAlert("Invalid debt amount");
+                showAlert("Enter valid numbers for amount, interest rate, and minimum payment.");
                 return;
             }
 
             if (name == null || name.isBlank() || recurrence == null) {
-                showAlert("Fill all debt fields");
+                showAlert("Fill all debt fields.");
                 return;
             }
-
-            System.out.println("About to save debt");
-            System.out.println("name = " + name);
-            System.out.println("amount = " + amount);
-            System.out.println("recurrence = " + recurrence);
 
             Debt debt = new Debt();
             debt.setName(name);
             debt.setAmount(amount);
+            debt.setInterestRate(interestRate);
+            debt.setMinimumPayment(minimumPayment);
             debt.setRecurrence(recurrence);
 
             debtDao.save(debt);
-            System.out.println("Saved through DAO");
-
             refreshDebts();
-
-
-            debtTable.refresh();
             updateTotals();
-
             stage.close();
         });
+
+        HBox buttonRow = new HBox(10, saveButton, cancelButton);
 
         VBox layout = new VBox(10,
                 nameLabel, nameField,
                 amountLabel, debtAmountField,
+                rateLabel, debtRateField,
+                minPaymentLabel, debtMinPaymentField,
                 recurrenceLabel, debtRecurrenceBox,
-                saveButton
+                buttonRow
         );
 
         layout.setPadding(new Insets(15));
@@ -412,6 +492,79 @@ public class DashboardController {
         expensesValueLabel.setText("$" + totalMonthlyExpenses.setScale(2, RoundingMode.HALF_UP));
         debtPaymentsValueLabel.setText("$" + totalMonthlyDebtPayments.setScale(2, RoundingMode.HALF_UP));
         remainingCashValueLabel.setText("$" + remainingCash.setScale(2, RoundingMode.HALF_UP));
+    }
+    @FXML
+    private void handleOpenExpenseWindow() {
+        Stage stage = new Stage();
+        stage.setTitle("Add Expense");
+
+        Label nameLabel = new Label("Expense Name");
+        TextField expenseNameField = new TextField();
+        expenseNameField.setPromptText("Rent, Food, Insurance");
+
+        Label amountLabel = new Label("Amount");
+        TextField expenseAmountField = new TextField();
+        expenseAmountField.setPromptText("Amount");
+
+        Label recurrenceLabel = new Label("Frequency");
+        ComboBox<Recurrence> expenseRecurrenceBox = new ComboBox<>();
+        expenseRecurrenceBox.getItems().addAll(Recurrence.values());
+
+        Label dueDateLabel = new Label("Due Date");
+        DatePicker expenseDueDatePicker = new DatePicker();
+
+        Button saveButton = new Button("Save Expense");
+        Button cancelButton = new Button("Cancel");
+        cancelButton.setOnAction(e -> stage.close());
+
+        saveButton.setOnAction(e -> {
+            String name = expenseNameField.getText();
+            Recurrence recurrence = expenseRecurrenceBox.getValue();
+            LocalDate dueDate = expenseDueDatePicker.getValue();
+
+            BigDecimal amount;
+            try {
+                amount = new BigDecimal(expenseAmountField.getText().trim());
+            } catch (Exception ex) {
+                showAlert("Invalid expense amount");
+                return;
+            }
+
+            if (name == null || name.isBlank() || recurrence == null || dueDate == null) {
+                showAlert("Fill all expense fields");
+                return;
+            }
+
+            Expense expense = new Expense();
+            expense.setName(name);
+            expense.setAmount(amount);
+            expense.setRecurrence(recurrence);
+            expense.setDueDate(dueDate);
+
+            expense.setCategory(ExpenseCategory.OTHER);
+            expenseDao.save(expense);
+            expenses.clear();
+            expenses.addAll(expenseDao.findAll());
+            expenseTable.refresh();
+            updateTotals();
+
+            stage.close();
+        });
+
+        HBox buttonRow = new HBox(10, saveButton, cancelButton);
+
+        VBox root = new VBox(10,
+                nameLabel, expenseNameField,
+                amountLabel, expenseAmountField,
+                recurrenceLabel, expenseRecurrenceBox,
+                dueDateLabel, expenseDueDatePicker,
+                buttonRow
+        );
+
+        root.setPadding(new Insets(15));
+
+        stage.setScene(new Scene(root, 320, 320));
+        stage.show();
     }
 
     private BigDecimal convertToMonthly(BigDecimal amount, Recurrence recurrence) {

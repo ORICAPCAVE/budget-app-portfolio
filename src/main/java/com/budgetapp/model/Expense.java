@@ -11,6 +11,7 @@ public class Expense {
     private LocalDate dueDate;
     private ExpenseCategory category;
 
+
     public Expense() {
     }
 

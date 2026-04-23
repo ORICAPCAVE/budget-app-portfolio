@@ -47,13 +47,15 @@ public class DatabaseManager {
                     """);
 
             statement.executeUpdate("""
-    CREATE TABLE IF NOT EXISTS debt (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        amount NUMERIC NOT NULL,
-        recurrence TEXT NOT NULL
-    )
-""");
+       CREATE TABLE IF NOT EXISTS debt (
+           id INTEGER PRIMARY KEY AUTOINCREMENT,
+           name TEXT NOT NULL,
+           amount DECIMAL(10,2) NOT NULL,
+           interest_rate DECIMAL(10,2) NOT NULL,
+           minimum_payment DECIMAL(10,2) NOT NULL,
+           recurrence TEXT NOT NULL
+       )
+        """);
         } catch (SQLException e) {
             throw new IllegalStateException("Failed to initialize database schema", e);
         }

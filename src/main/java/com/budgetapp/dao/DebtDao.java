@@ -26,8 +26,10 @@ public class DebtDao {
             while (rs.next()) {
                 Debt debt = new Debt();
                 debt.setId(rs.getLong("id"));
-                debt.setName(rs.getString("name")); // <-- changed
+                debt.setName(rs.getString("name"));
                 debt.setAmount(rs.getBigDecimal("amount"));
+                debt.setInterestRate(rs.getBigDecimal("interest_rate"));
+                debt.setMinimumPayment(rs.getBigDecimal("minimum_payment"));
                 debt.setRecurrence(Recurrence.valueOf(rs.getString("recurrence")));
 
                 list.add(debt);
@@ -40,23 +42,12 @@ public class DebtDao {
         return list;
     }
 
+
     public void save(Debt debt) {
-        String sql = """
-            INSERT INTO debt(name, amount, recurrence)
-            VALUES (?, ?, ?)
-        """;
-
-        try (Connection conn = db.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-
-            ps.setString(1, debt.getName()); // <-- changed
-            ps.setBigDecimal(2, debt.getAmount());
-            ps.setString(3, debt.getRecurrence().name());
-
-            ps.executeUpdate();
-
-        } catch (Exception e) {
-            e.printStackTrace();
+        if (debt.getId() == 0 || debt.getId() == 0) {
+            insert(debt);
+        } else {
+            update(debt);
         }
     }
 
@@ -67,6 +58,56 @@ public class DebtDao {
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
             ps.setLong(1, id);
+            ps.executeUpdate();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    private void insert(Debt debt) {
+        String sql = """
+        INSERT INTO debt(name, amount, interest_rate, minimum_payment, recurrence)
+        VALUES (?, ?, ?, ?, ?)
+    """;
+
+        try (Connection conn = db.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+
+            ps.setString(1, debt.getName());
+            ps.setBigDecimal(2, debt.getAmount());
+            ps.setBigDecimal(3, debt.getInterestRate());
+            ps.setBigDecimal(4, debt.getMinimumPayment());
+            ps.setString(5, debt.getRecurrence().name());
+
+            ps.executeUpdate();
+
+            try (ResultSet keys = ps.getGeneratedKeys()) {
+                if (keys.next()) {
+                    debt.setId(keys.getLong(1));
+                }
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    private void update(Debt debt) {
+        String sql = """
+        UPDATE debt
+        SET name = ?, amount = ?, interest_rate = ?, minimum_payment = ?, recurrence = ?
+        WHERE id = ?
+    """;
+
+        try (Connection conn = db.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, debt.getName());
+            ps.setBigDecimal(2, debt.getAmount());
+            ps.setBigDecimal(3, debt.getInterestRate());
+            ps.setBigDecimal(4, debt.getMinimumPayment());
+            ps.setString(5, debt.getRecurrence().name());
+            ps.setLong(6, debt.getId());
+
             ps.executeUpdate();
 
         } catch (Exception e) {
