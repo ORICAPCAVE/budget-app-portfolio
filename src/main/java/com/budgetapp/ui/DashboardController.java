@@ -27,6 +27,10 @@ public class DashboardController {
     @FXML private Label expensesValueLabel;
     @FXML private Label debtPaymentsValueLabel;
     @FXML private Label remainingCashValueLabel;
+    @FXML private Label payoffMonthsLabel;
+    @FXML private Label payoffInterestLabel;
+    @FXML private Label negativeAmortizationLabel;
+
 
     // ===== New Input Fields =====
     @FXML private TextField nameField;
@@ -49,6 +53,9 @@ public class DashboardController {
     @FXML private TableColumn<Debt, BigDecimal> debtRateColumn;
     @FXML private TableColumn<Debt, BigDecimal> debtMinPaymentColumn;
     @FXML private TableColumn<Debt, Recurrence> debtRecurrenceColumn;
+    @FXML private TableColumn<Debt, Integer> debtMonthsColumn;
+    @FXML private TableColumn<Debt, String> debtInterestPaidColumn;
+    @FXML private TableColumn<Debt, String> debtNegativeAmColumn;
 
     private final ObservableList<Income> incomes = FXCollections.observableArrayList();
 
@@ -105,6 +112,38 @@ public class DashboardController {
 
         debtRecurrenceColumn.setCellValueFactory(data ->
                 new javafx.beans.property.SimpleObjectProperty<>(data.getValue().getRecurrence()));
+        DebtCalculationService service = new DebtCalculationService();
+
+        debtMonthsColumn.setCellValueFactory(data -> {
+            try {
+                PayoffResult result = service.calculatePayoff(data.getValue());
+                return new javafx.beans.property.SimpleObjectProperty<>(result.monthsToPayoff());
+            } catch (Exception e) {
+                return new javafx.beans.property.SimpleObjectProperty<>(null);
+            }
+        });
+
+        debtInterestPaidColumn.setCellValueFactory(data -> {
+            try {
+                PayoffResult result = service.calculatePayoff(data.getValue());
+                return new javafx.beans.property.SimpleStringProperty(
+                        "$" + String.format("%.2f", result.totalInterestPaid())
+                );
+            } catch (Exception e) {
+                return new javafx.beans.property.SimpleStringProperty("—");
+            }
+        });
+
+        debtNegativeAmColumn.setCellValueFactory(data -> {
+            try {
+                PayoffResult result = service.calculatePayoff(data.getValue());
+                return new javafx.beans.property.SimpleStringProperty(
+                        result.negativeAmortization() ? "Yes" : "No"
+                );
+            } catch (Exception e) {
+                return new javafx.beans.property.SimpleStringProperty("—");
+            }
+        });
 
         debts.clear();
         debts.addAll(debtDao.findAll());
@@ -287,8 +326,8 @@ public class DashboardController {
             debtDao.save(debt);
             System.out.println("Saved through DAO");
 
-            debts.add(debt);
-            System.out.println("Added to ObservableList. Size = " + debts.size());
+            refreshDebts();
+
 
             debtTable.refresh();
             updateTotals();
@@ -339,7 +378,12 @@ public class DashboardController {
         System.out.println("Total interest: $" + result.totalInterestPaid());
         System.out.println("Negative amortization: " + result.negativeAmortization());
     }
-
+    private void refreshDebts() {
+        debts.clear();
+        debts.addAll(debtDao.findAll());
+        debtTable.refresh();
+        System.out.println("Debt table refreshed. Loaded debts = " + debts.size());
+    }
     // ===== CORE LOGIC (important) =====
     private void updateTotals() {
         BigDecimal totalMonthlyIncome = BigDecimal.ZERO;

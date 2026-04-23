@@ -49,6 +49,18 @@
                     <Label text="Remaining Cash" style="-fx-font-weight: bold;"/>
                     <Label fx:id="remainingCashValueLabel" text="0.00" style="-fx-font-size: 20px;"/>
                 </VBox>
+                <VBox spacing="4.0"
+                      style="-fx-background-color: #fef3c7; -fx-padding: 14; -fx-background-radius: 10;"
+                      GridPane.columnIndex="2"
+                      GridPane.rowIndex="1">
+
+                    <Label text="Payoff Report" style="-fx-font-weight: bold;" />
+
+                    <Label fx:id="payoffMonthsLabel" text="Months to payoff: -" />
+                    <Label fx:id="payoffInterestLabel" text="Total interest: -" />
+                    <Label fx:id="negativeAmortizationLabel" text="Negative amortization: -" />
+
+                </VBox>
             </GridPane>
 
             <HBox spacing="10.0">
@@ -118,6 +130,10 @@
                     <TableColumn fx:id="debtRateColumn" text="Interest Rate"/>
                     <TableColumn fx:id="debtMinPaymentColumn" text="Min Payment"/>
                     <TableColumn fx:id="debtRecurrenceColumn" text="Frequency"/>
+                    <TableColumn fx:id="debtMonthsColumn" text="Months" />
+                    <TableColumn fx:id="debtInterestPaidColumn" text="Total Interest" />
+                    <TableColumn fx:id="debtNegativeAmColumn" text="Neg Am?" />
+
                 </columns>
             </TableView>
             <Button text="Delete Selected Debt" onAction="#handleDeleteDebt"/>
