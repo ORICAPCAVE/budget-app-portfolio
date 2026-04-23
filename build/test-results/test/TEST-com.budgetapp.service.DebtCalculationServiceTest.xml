@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.budgetapp.service.DebtCalculationServiceTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-04-23T02:42:51" hostname="Kevins-MacBook-Pro.local" time="0.021">
+  <properties/>
+  <testcase name="shouldDetectNegativeAmortization()" classname="com.budgetapp.service.DebtCalculationServiceTest" time="0.021"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

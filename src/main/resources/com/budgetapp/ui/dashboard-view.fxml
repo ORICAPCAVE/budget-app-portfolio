@@ -58,11 +58,7 @@
             </HBox>
 
             <VBox spacing="8.0" style="-fx-background-color: #f8fafc; -fx-padding: 16; -fx-border-color: #d9e2ec; -fx-border-radius: 10; -fx-background-radius: 10;">
-                <Label text="Next suggested implementation steps" style="-fx-font-weight: bold; -fx-font-size: 14px;"/>
-                <Label text="1. Implement DAOs for SQLite save/load." />
-                <Label text="2. Add forms for income, expenses, and debts." />
-                <Label text="3. Bind dashboard cards to live calculated totals." />
-                <Label text="4. Add a payoff schedule screen for loans and credit cards." />
+
                 <HBox spacing="10" alignment="BOTTOM_LEFT">
                     <VBox spacing="4">
                         <Label text="Expense Name"/>
@@ -113,9 +109,18 @@
                         <TableColumn fx:id="incomeRecurrenceColumn" text="Recurrence"/>
                     </columns>
                 </TableView>
-
                 <Button text="Delete Selected Income" onAction="#handleDeleteIncome"/>
             </VBox>
+            <TableView fx:id="debtTable">
+                <columns>
+                    <TableColumn fx:id="debtNameColumn" text="Debt Name"/>
+                    <TableColumn fx:id="debtAmountColumn" text="Balance"/>
+                    <TableColumn fx:id="debtRateColumn" text="Interest Rate"/>
+                    <TableColumn fx:id="debtMinPaymentColumn" text="Min Payment"/>
+                    <TableColumn fx:id="debtRecurrenceColumn" text="Frequency"/>
+                </columns>
+            </TableView>
+            <Button text="Delete Selected Debt" onAction="#handleDeleteDebt"/>
         </VBox>
     </center>
 </BorderPane>

@@ -6,26 +6,32 @@ import java.time.LocalDate;
 public class Debt {
     private long id;
     private String name;
-    private DebtType type;
-    private BigDecimal balance;
-    private BigDecimal apr;
+    private BigDecimal amount;
+    private Recurrence recurrence;
+    private BigDecimal interestRate;
     private BigDecimal minimumPayment;
-    private BigDecimal extraPayment;
-    private LocalDate dueDate;
 
+    public Debt(String name, BigDecimal amount, Recurrence recurrence,
+                BigDecimal interestRate, BigDecimal minimumPayment) {
+        this.name = name;
+        this.amount = amount;
+        this.recurrence = recurrence;
+        this.interestRate = interestRate;
+        this.minimumPayment = minimumPayment;
+    }
     public Debt() {
     }
 
-    public Debt(long id, String name, DebtType type, BigDecimal balance, BigDecimal apr,
-                BigDecimal minimumPayment, BigDecimal extraPayment, LocalDate dueDate) {
-        this.id = id;
+    public void setName(String name) {
         this.name = name;
-        this.type = type;
-        this.balance = balance;
-        this.apr = apr;
-        this.minimumPayment = minimumPayment;
-        this.extraPayment = extraPayment;
-        this.dueDate = dueDate;
+    }
+
+    public void setAmount(BigDecimal amount) {
+        this.amount = amount;
+    }
+
+    public void setRecurrence(Recurrence recurrence) {
+        this.recurrence = recurrence;
     }
 
     public long getId() {
@@ -40,59 +46,27 @@ public class Debt {
         return name;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    public BigDecimal getAmount() {
+        return amount;
     }
 
-    public DebtType getType() {
-        return type;
+    public Recurrence getRecurrence() {
+        return recurrence;
     }
 
-    public void setType(DebtType type) {
-        this.type = type;
-    }
-
-    public BigDecimal getBalance() {
-        return balance;
-    }
-
-    public void setBalance(BigDecimal balance) {
-        this.balance = balance;
-    }
-
-    public BigDecimal getApr() {
-        return apr;
-    }
-
-    public void setApr(BigDecimal apr) {
-        this.apr = apr;
+    public BigDecimal getInterestRate() {
+        return interestRate;
     }
 
     public BigDecimal getMinimumPayment() {
         return minimumPayment;
     }
 
+    public void setInterestRate(BigDecimal interestRate) {
+        this.interestRate = interestRate;
+    }
+
     public void setMinimumPayment(BigDecimal minimumPayment) {
         this.minimumPayment = minimumPayment;
-    }
-
-    public BigDecimal getExtraPayment() {
-        return extraPayment;
-    }
-
-    public void setExtraPayment(BigDecimal extraPayment) {
-        this.extraPayment = extraPayment;
-    }
-
-    public LocalDate getDueDate() {
-        return dueDate;
-    }
-
-    public void setDueDate(LocalDate dueDate) {
-        this.dueDate = dueDate;
-    }
-
-    public BigDecimal getTotalMonthlyPayment() {
-        return minimumPayment.add(extraPayment);
     }
 }

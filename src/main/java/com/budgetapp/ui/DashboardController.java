@@ -1,10 +1,12 @@
 package com.budgetapp.ui;
 
+import com.budgetapp.dao.DebtDao;
 import com.budgetapp.dao.ExpenseDao;
 import com.budgetapp.dao.IncomeDao;
-import com.budgetapp.model.Expense;
-import com.budgetapp.model.Income;
-import com.budgetapp.model.Recurrence;
+import com.budgetapp.model.*;
+import com.budgetapp.service.DebtCalculationService;
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -41,13 +43,20 @@ public class DashboardController {
     @FXML private TableColumn<Income, String> incomeSourceColumn;
     @FXML private TableColumn<Income, BigDecimal> incomeAmountColumn;
     @FXML private TableColumn<Income, Recurrence> incomeRecurrenceColumn;
+    @FXML private TableView<Debt> debtTable;
+    @FXML private TableColumn<Debt, String> debtNameColumn;
+    @FXML private TableColumn<Debt, BigDecimal> debtAmountColumn;
+    @FXML private TableColumn<Debt, BigDecimal> debtRateColumn;
+    @FXML private TableColumn<Debt, BigDecimal> debtMinPaymentColumn;
+    @FXML private TableColumn<Debt, Recurrence> debtRecurrenceColumn;
 
     private final ObservableList<Income> incomes = FXCollections.observableArrayList();
 
     private final ObservableList<Expense> expenses = FXCollections.observableArrayList();
     private final ExpenseDao expenseDao = new ExpenseDao();
     private final IncomeDao incomeDao = new IncomeDao();
-
+    private final DebtDao debtDao = new DebtDao();
+    private final ObservableList<Debt> debts = FXCollections.observableArrayList();
     @FXML
     public void initialize() {
 
@@ -68,8 +77,8 @@ public class DashboardController {
                 new javafx.beans.property.SimpleObjectProperty<>(data.getValue().getRecurrence()));
 
         expenses.addAll(expenseDao.findAll());
-
         expenseTable.setItems(expenses);
+
         incomeSourceColumn.setCellValueFactory(data ->
                 new javafx.beans.property.SimpleStringProperty(data.getValue().getSource()));
 
@@ -81,6 +90,27 @@ public class DashboardController {
 
         incomes.addAll(incomeDao.findAll());
         incomeTable.setItems(incomes);
+
+        debtNameColumn.setCellValueFactory(data ->
+                new javafx.beans.property.SimpleStringProperty(data.getValue().getName()));
+
+        debtAmountColumn.setCellValueFactory(data ->
+                new javafx.beans.property.SimpleObjectProperty<>(data.getValue().getAmount()));
+
+        debtRateColumn.setCellValueFactory(data ->
+                new javafx.beans.property.SimpleObjectProperty<>(data.getValue().getInterestRate()));
+
+        debtMinPaymentColumn.setCellValueFactory(data ->
+                new javafx.beans.property.SimpleObjectProperty<>(data.getValue().getMinimumPayment()));
+
+        debtRecurrenceColumn.setCellValueFactory(data ->
+                new javafx.beans.property.SimpleObjectProperty<>(data.getValue().getRecurrence()));
+
+        debts.clear();
+        debts.addAll(debtDao.findAll());
+        debtTable.setItems(debts);
+
+        System.out.println("Debt table initialized. Loaded debts = " + debts.size());
 
         updateTotals();
     }
@@ -214,65 +244,100 @@ public class DashboardController {
         stage.setTitle("Add Debt");
 
         Label nameLabel = new Label("Debt Name");
-        TextField debtNameField = new TextField();
-        debtNameField.setPromptText("Credit Card, Car Loan");
+        TextField nameField = new TextField();
+        nameField.setPromptText("Credit Card, Car Loan");
 
-        Label balanceLabel = new Label("Balance");
-        TextField balanceField = new TextField();
-        balanceField.setPromptText("Current Balance");
+        Label amountLabel = new Label("Payment Amount");
+        TextField debtAmountField = new TextField();
+        debtAmountField.setPromptText("Amount");
 
-        Label paymentLabel = new Label("Monthly Payment");
-        TextField paymentField = new TextField();
-        paymentField.setPromptText("Monthly Payment");
+        Label recurrenceLabel = new Label("Frequency");
+        ComboBox<Recurrence> debtRecurrenceBox = new ComboBox<>();
+        debtRecurrenceBox.getItems().addAll(Recurrence.values());
 
         Button saveButton = new Button("Save Debt");
 
         saveButton.setOnAction(e -> {
-            String debtName = debtNameField.getText();
+            String name = nameField.getText();
+            Recurrence recurrence = debtRecurrenceBox.getValue();
 
-            BigDecimal balance;
-            BigDecimal payment;
-
+            BigDecimal amount;
             try {
-                balance = new BigDecimal(balanceField.getText());
-                payment = new BigDecimal(paymentField.getText());
+                amount = new BigDecimal(debtAmountField.getText());
             } catch (Exception ex) {
-                showAlert("Invalid debt numbers");
+                showAlert("Invalid debt amount");
                 return;
             }
 
-            if (debtName == null || debtName.isBlank()) {
+            if (name == null || name.isBlank() || recurrence == null) {
                 showAlert("Fill all debt fields");
                 return;
             }
 
-            // Later:
-            // Debt debt = new Debt();
-            // debt.setName(debtName);
-            // debt.setBalance(balance);
-            // debt.setMonthlyPayment(payment);
-            // debtDao.save(debt);
+            System.out.println("About to save debt");
+            System.out.println("name = " + name);
+            System.out.println("amount = " + amount);
+            System.out.println("recurrence = " + recurrence);
 
-            showAlert("Debt save wiring is next.");
+            Debt debt = new Debt();
+            debt.setName(name);
+            debt.setAmount(amount);
+            debt.setRecurrence(recurrence);
+
+            debtDao.save(debt);
+            System.out.println("Saved through DAO");
+
+            debts.add(debt);
+            System.out.println("Added to ObservableList. Size = " + debts.size());
+
+            debtTable.refresh();
+            updateTotals();
+
             stage.close();
         });
 
-        VBox root = new VBox(10,
-                nameLabel, debtNameField,
-                balanceLabel, balanceField,
-                paymentLabel, paymentField,
+        VBox layout = new VBox(10,
+                nameLabel, nameField,
+                amountLabel, debtAmountField,
+                recurrenceLabel, debtRecurrenceBox,
                 saveButton
         );
-        root.setPadding(new Insets(15));
 
-        Scene scene = new Scene(root, 320, 240);
-        stage.setScene(scene);
+        layout.setPadding(new Insets(15));
+
+        stage.setScene(new Scene(layout));
         stage.show();
+    }
+    @FXML
+    private void handleDeleteDebt() {
+        Debt selected = debtTable.getSelectionModel().getSelectedItem();
+
+        if (selected == null) {
+            return;
+        }
+
+        debtDao.delete(selected.getId());
+        debts.remove(selected);
+
+        debtTable.refresh();
+        updateTotals();
     }
 
     @FXML
     private void handleRunPayoffReport() {
-        showAlert("Payoff report is not implemented yet.");
+        Debt selected = debtTable.getSelectionModel().getSelectedItem();
+
+        if (selected == null) {
+            System.out.println("No debt selected");
+            return;
+        }
+
+        DebtCalculationService service = new DebtCalculationService();
+        PayoffResult result = service.calculatePayoff(selected);
+
+        System.out.println("Months to payoff: " + result.monthsToPayoff());
+        System.out.println("Total interest: $" + result.totalInterestPaid());
+        System.out.println("Negative amortization: " + result.negativeAmortization());
     }
 
     // ===== CORE LOGIC (important) =====
