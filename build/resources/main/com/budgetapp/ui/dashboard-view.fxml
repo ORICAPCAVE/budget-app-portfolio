@@ -119,6 +119,7 @@
                         <TableColumn fx:id="incomeSourceColumn" text="Source"/>
                         <TableColumn fx:id="incomeAmountColumn" text="Amount"/>
                         <TableColumn fx:id="incomeRecurrenceColumn" text="Recurrence"/>
+                        <TableColumn fx:id="incomeReceivedDateColumn" text="Date"  />
                     </columns>
                 </TableView>
                 <Button text="Delete Selected Income" onAction="#handleDeleteIncome"/>

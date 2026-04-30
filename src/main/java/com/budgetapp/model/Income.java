@@ -1,12 +1,14 @@
 package com.budgetapp.model;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 public class Income {
     private long id;
     private String source;
     private BigDecimal amount;
     private Recurrence recurrence;
+    private LocalDate receivedDate;
 
     public Income() {
     }
@@ -49,4 +51,15 @@ public class Income {
     public void setRecurrence(Recurrence recurrence) {
         this.recurrence = recurrence;
     }
+    public LocalDate getReceivedDate() {
+        return receivedDate;
+    }
+
+    public void setReceivedDate(LocalDate receivedDate) {
+        this.receivedDate = receivedDate;
+    }
+
+
+
+
 }

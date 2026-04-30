@@ -22,7 +22,8 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
-
+import javafx.scene.control.cell.TextFieldTableCell;
+import javafx.util.converter.BigDecimalStringConverter;
 import javafx.geometry.Insets;
 public class DashboardController {
 
@@ -60,6 +61,7 @@ public class DashboardController {
     @FXML private TableColumn<Debt, Integer> debtMonthsColumn;
     @FXML private TableColumn<Debt, String> debtInterestPaidColumn;
     @FXML private TableColumn<Debt, String> debtNegativeAmColumn;
+    @FXML private TableColumn<Income, String> incomeReceivedDateColumn;
 
     private final ObservableList<Income> incomes = FXCollections.observableArrayList();
 
@@ -106,12 +108,29 @@ public class DashboardController {
 
         incomeSourceColumn.setCellValueFactory(data ->
                 new javafx.beans.property.SimpleStringProperty(data.getValue().getSource()));
-
+        incomeTable.setEditable(true);
+        incomeAmountColumn.setCellFactory(
+                TextFieldTableCell.forTableColumn(new BigDecimalStringConverter())
+        );
         incomeAmountColumn.setCellValueFactory(data ->
                 new javafx.beans.property.SimpleObjectProperty<>(data.getValue().getAmount()));
+        incomeAmountColumn.setOnEditCommit(event -> {
+            Income income = event.getRowValue();
+            income.setAmount(event.getNewValue());
+            incomeDao.update(income);
 
+            incomeTable.refresh();
+            updateTotals();
+        });
         incomeRecurrenceColumn.setCellValueFactory(data ->
                 new javafx.beans.property.SimpleObjectProperty<>(data.getValue().getRecurrence()));
+        incomeReceivedDateColumn.setCellValueFactory(data ->
+                new SimpleStringProperty(
+                        data.getValue().getReceivedDate() == null
+                                ? ""
+                                : data.getValue().getReceivedDate().toString()
+                )
+        );
 
         incomes.addAll(incomeDao.findAll());
         incomeTable.setItems(incomes);
@@ -169,6 +188,7 @@ public class DashboardController {
         debtTable.setEditable(true);
 
         System.out.println("Debt table initialized. Loaded debts = " + debts.size());
+
 
         updateTotals();
         debtAmountColumn.setCellFactory(TextFieldTableCell.forTableColumn(bigDecimalConverter));
@@ -304,6 +324,9 @@ public class DashboardController {
         ComboBox<Recurrence> incomeRecurrenceBox = new ComboBox<>();
         incomeRecurrenceBox.getItems().addAll(Recurrence.values());
 
+        Label receivedDateLabel = new Label("Date income is scheduled / received");
+        DatePicker receivedDatePicker = new DatePicker();
+
         Button saveButton = new Button("Save Income");
 
         saveButton.setOnAction(e -> {
@@ -327,9 +350,16 @@ public class DashboardController {
             income.setSource(source);
             income.setAmount(amount);
             income.setRecurrence(recurrence);
-
+            income.setReceivedDate(receivedDatePicker.getValue());
             incomeDao.save(income);
-            incomes.add(income);
+            incomes.clear();
+            incomes.addAll(incomeDao.findAll());
+            System.out.println("---- INCOMES ----");
+            for (Income i : incomes) {
+                System.out.println(i.getId() + " | " + i.getSource() + " | " + i.getAmount() + " | " + i.getRecurrence());
+            }
+
+            incomeTable.refresh();
             updateTotals();
 
             stage.close();
@@ -339,6 +369,7 @@ public class DashboardController {
                 sourceLabel, sourceField,
                 amountLabel, incomeAmountField,
                 recurrenceLabel, incomeRecurrenceBox,
+                receivedDateLabel, receivedDatePicker,
                 saveButton
         );
         root.setPadding(new Insets(15));
@@ -468,25 +499,32 @@ public class DashboardController {
     private void updateTotals() {
         BigDecimal totalMonthlyIncome = BigDecimal.ZERO;
         BigDecimal totalMonthlyExpenses = BigDecimal.ZERO;
-        BigDecimal totalMonthlyDebtPayments = BigDecimal.ZERO; // placeholder for later
-
-        List<Income> incomes = incomeDao.findAll();
+        BigDecimal totalMonthlyDebtPayments = BigDecimal.ZERO;
 
         for (Income income : incomes) {
-            totalMonthlyIncome = totalMonthlyIncome.add(
-                    convertToMonthly(income.getAmount(), income.getRecurrence())
-            );
+            if (income.getAmount() != null) {
+                totalMonthlyIncome = totalMonthlyIncome.add(income.getAmount());
+            }
         }
-
         for (Expense e : expenses) {
-            totalMonthlyExpenses = totalMonthlyExpenses.add(
-                    convertToMonthly(e.getAmount(), e.getRecurrence())
-            );
-        }
+            if (e.getAmount() != null) {
 
+                totalMonthlyExpenses = totalMonthlyExpenses.add(e.getAmount());
+            }
+        }
         BigDecimal remainingCash = totalMonthlyIncome
                 .subtract(totalMonthlyExpenses)
                 .subtract(totalMonthlyDebtPayments);
+        System.out.println("---- INCOMES COUNTED ----");
+        for (Income income : incomes) {
+            System.out.println(
+                    income.getId() + " | " +
+                            income.getSource() + " | " +
+                            income.getAmount() + " | " +
+                            income.getRecurrence()
+            );
+        }
+        System.out.println("-------------------------");
 
         incomeValueLabel.setText("$" + totalMonthlyIncome.setScale(2, RoundingMode.HALF_UP));
         expensesValueLabel.setText("$" + totalMonthlyExpenses.setScale(2, RoundingMode.HALF_UP));
@@ -569,12 +607,20 @@ public class DashboardController {
 
     private BigDecimal convertToMonthly(BigDecimal amount, Recurrence recurrence) {
         return switch (recurrence) {
-            case MONTHLY -> amount;
-            case QUARTERLY -> amount.divide(BigDecimal.valueOf(3), 2, RoundingMode.HALF_UP);
-            case YEARLY -> amount.divide(BigDecimal.valueOf(12), 2, RoundingMode.HALF_UP);
+            case DAILY -> amount.multiply(BigDecimal.valueOf(365))
+                    .divide(BigDecimal.valueOf(12), 2, RoundingMode.HALF_UP);
+
             case WEEKLY -> amount.multiply(BigDecimal.valueOf(52))
                     .divide(BigDecimal.valueOf(12), 2, RoundingMode.HALF_UP);
-            default -> amount;
+
+            case BIWEEKLY -> amount.multiply(BigDecimal.valueOf(26))
+                    .divide(BigDecimal.valueOf(12), 2, RoundingMode.HALF_UP);
+
+            case MONTHLY -> amount;
+
+            case QUARTERLY -> amount.divide(BigDecimal.valueOf(3), 2, RoundingMode.HALF_UP);
+
+            case YEARLY -> amount.divide(BigDecimal.valueOf(12), 2, RoundingMode.HALF_UP);
         };
     }
 

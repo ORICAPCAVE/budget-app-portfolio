@@ -22,10 +22,13 @@ public class DatabaseManager {
     }
 
     public void initializeSchema() {
+
+
         try (Connection connection = getConnection();
              Statement statement = connection.createStatement()) {
 
             statement.executeUpdate("""
+                    
                     CREATE TABLE IF NOT EXISTS income (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         source TEXT NOT NULL,
@@ -34,6 +37,7 @@ public class DatabaseManager {
                         received_date TEXT
                     )
                     """);
+
 
             statement.executeUpdate("""
                     CREATE TABLE IF NOT EXISTS expense (
@@ -45,6 +49,8 @@ public class DatabaseManager {
                         category TEXT NOT NULL
                     )
                     """);
+
+
 
             statement.executeUpdate("""
        CREATE TABLE IF NOT EXISTS debt (
@@ -59,5 +65,6 @@ public class DatabaseManager {
         } catch (SQLException e) {
             throw new IllegalStateException("Failed to initialize database schema", e);
         }
+
     }
 }

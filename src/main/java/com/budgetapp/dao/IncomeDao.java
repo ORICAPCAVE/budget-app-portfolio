@@ -7,6 +7,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -16,6 +17,7 @@ public class IncomeDao {
 
     public List<Income> findAll() {
         List<Income> list = new ArrayList<>();
+
 
         String sql = "SELECT * FROM income";
 
@@ -30,6 +32,11 @@ public class IncomeDao {
                 income.setAmount(rs.getBigDecimal("amount"));
                 income.setRecurrence(Recurrence.valueOf(rs.getString("recurrence")));
 
+                String dateStr = rs.getString("received_date");
+                if (dateStr != null) {
+                    income.setReceivedDate(LocalDate.parse(dateStr));
+                }
+
                 list.add(income);
             }
 
@@ -42,9 +49,9 @@ public class IncomeDao {
 
     public void save(Income income) {
         String sql = """
-            INSERT INTO income(source, amount, recurrence)
-            VALUES (?, ?, ?)
-        """;
+        INSERT INTO income(source, amount, recurrence, received_date)
+        VALUES (?, ?, ?, ?)
+    """;
 
         try (Connection conn = db.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -52,6 +59,11 @@ public class IncomeDao {
             ps.setString(1, income.getSource());
             ps.setBigDecimal(2, income.getAmount());
             ps.setString(3, income.getRecurrence().name());
+            ps.setString(4,
+                    income.getReceivedDate() == null
+                            ? null
+                            : income.getReceivedDate().toString()
+            );
 
             ps.executeUpdate();
 
@@ -73,4 +85,31 @@ public class IncomeDao {
             e.printStackTrace();
         }
     }
+    public void update(Income income) {
+        String sql = """
+        UPDATE income
+        SET source = ?, amount = ?, recurrence = ?, received_date = ?
+        WHERE id = ?
+    """;
+
+        try (Connection conn = db.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, income.getSource());
+            ps.setBigDecimal(2, income.getAmount());
+            ps.setString(3, income.getRecurrence().name());
+            ps.setString(4,
+                    income.getReceivedDate() == null
+                            ? null
+                            : income.getReceivedDate().toString()
+            );
+            ps.setLong(5, income.getId());
+
+            ps.executeUpdate();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
 }
