@@ -1,30 +1,30 @@
 package com.budgetapp.ui;
 
 import com.budgetapp.dao.DebtDao;
+import com.budgetapp.dao.DedicatedBillDao;
 import com.budgetapp.dao.ExpenseDao;
 import com.budgetapp.dao.IncomeDao;
 import com.budgetapp.model.*;
 import com.budgetapp.service.DebtCalculationService;
+import com.budgetapp.service.DedicatedBillCalculationService;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
-import com.budgetapp.model.ExpenseCategory;
-import javafx.scene.control.cell.TextFieldTableCell;
-import javafx.scene.layout.HBox;
-import javafx.util.StringConverter;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
+import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.control.cell.TextFieldTableCell;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import javafx.util.StringConverter;
+import javafx.util.converter.BigDecimalStringConverter;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.util.List;
-import javafx.scene.control.cell.TextFieldTableCell;
-import javafx.util.converter.BigDecimalStringConverter;
-import javafx.geometry.Insets;
 public class DashboardController {
 
     // ===== Existing Labels =====
@@ -62,6 +62,11 @@ public class DashboardController {
     @FXML private TableColumn<Debt, String> debtInterestPaidColumn;
     @FXML private TableColumn<Debt, String> debtNegativeAmColumn;
     @FXML private TableColumn<Income, String> incomeReceivedDateColumn;
+    @FXML private TableView<DedicatedBill> dedicatedBillsTable;
+    @FXML private TableColumn<DedicatedBill, String> dedicatedBillNameColumn;
+    @FXML private TableColumn<DedicatedBill, BigDecimal> dedicatedBillAmountColumn;
+    @FXML private TableColumn<DedicatedBill, Recurrence> dedicatedBillRecurrenceColumn;
+    @FXML private TableColumn<DedicatedBill, BillGroup> dedicatedBillGroupColumn;
 
     private final ObservableList<Income> incomes = FXCollections.observableArrayList();
 
@@ -69,6 +74,7 @@ public class DashboardController {
     private final ExpenseDao expenseDao = new ExpenseDao();
     private final IncomeDao incomeDao = new IncomeDao();
     private final DebtDao debtDao = new DebtDao();
+    private final DedicatedBillDao dedicatedBillDao = new DedicatedBillDao();
     private final ObservableList<Debt> debts = FXCollections.observableArrayList();
     private final StringConverter<BigDecimal> bigDecimalConverter = new StringConverter<>() {
         @Override
@@ -84,6 +90,10 @@ public class DashboardController {
             return new BigDecimal(text.trim());
         }
     };
+    private final DedicatedBillCalculationService dedicatedBillCalculationService =
+            new DedicatedBillCalculationService();
+    private final ObservableList<DedicatedBill> dedicatedBills =
+            FXCollections.observableArrayList();
     @FXML
     public void initialize() {
 
@@ -241,7 +251,46 @@ public class DashboardController {
                 showAlert("Invalid minimum payment");
                 refreshDebts();
             }
+
         });
+        dedicatedBillNameColumn.setCellValueFactory(data ->
+                new SimpleStringProperty(data.getValue().getName()));
+
+        dedicatedBillsTable.setEditable(true);
+
+        dedicatedBillAmountColumn.setCellValueFactory(data ->
+                new SimpleObjectProperty<>(data.getValue().getAmount()));
+
+        dedicatedBillAmountColumn.setCellFactory(
+                TextFieldTableCell.forTableColumn(new BigDecimalStringConverter())
+        );
+
+        dedicatedBillAmountColumn.setOnEditCommit(event -> {
+            DedicatedBill bill = event.getRowValue();
+
+            try {
+                BigDecimal newAmount = event.getNewValue();
+
+                if (newAmount == null) return;
+
+                bill.setAmount(newAmount);
+                dedicatedBillDao.update(bill);
+
+                updateTotals();
+            } catch (Exception e) {
+                dedicatedBillsTable.refresh(); // revert bad edit
+            }
+        });
+
+        dedicatedBillRecurrenceColumn.setCellValueFactory(data ->
+                new SimpleObjectProperty<>(data.getValue().getRecurrence()));
+
+        dedicatedBillGroupColumn.setCellValueFactory(data ->
+                new SimpleObjectProperty<>(data.getValue().getBillGroup()));
+
+        dedicatedBills.clear();
+        dedicatedBills.addAll(dedicatedBillDao.findAll());
+        dedicatedBillsTable.setItems(dedicatedBills);
     }
     @FXML
     private void handleDeleteIncome() {
@@ -500,31 +549,37 @@ public class DashboardController {
         BigDecimal totalMonthlyIncome = BigDecimal.ZERO;
         BigDecimal totalMonthlyExpenses = BigDecimal.ZERO;
         BigDecimal totalMonthlyDebtPayments = BigDecimal.ZERO;
+        BigDecimal totalMonthlyDedicatedBills = BigDecimal.ZERO;
 
         for (Income income : incomes) {
             if (income.getAmount() != null) {
                 totalMonthlyIncome = totalMonthlyIncome.add(income.getAmount());
             }
         }
+        BigDecimal businessBills =
+                dedicatedBillCalculationService.totalMonthlyForGroup(dedicatedBills, BillGroup.BUSINESS);
+
+        BigDecimal livingBills =
+                dedicatedBillCalculationService.totalMonthlyForGroup(dedicatedBills, BillGroup.LIVING);
+
+
         for (Expense e : expenses) {
             if (e.getAmount() != null) {
-
                 totalMonthlyExpenses = totalMonthlyExpenses.add(e.getAmount());
             }
         }
+
+        for (DedicatedBill bill : dedicatedBills) {
+            if (bill.getAmount() != null) {
+                totalMonthlyDedicatedBills =
+                        totalMonthlyDedicatedBills.add(bill.getAmount());
+            }
+        }
+
         BigDecimal remainingCash = totalMonthlyIncome
                 .subtract(totalMonthlyExpenses)
+                .subtract(totalMonthlyDedicatedBills)
                 .subtract(totalMonthlyDebtPayments);
-        System.out.println("---- INCOMES COUNTED ----");
-        for (Income income : incomes) {
-            System.out.println(
-                    income.getId() + " | " +
-                            income.getSource() + " | " +
-                            income.getAmount() + " | " +
-                            income.getRecurrence()
-            );
-        }
-        System.out.println("-------------------------");
 
         incomeValueLabel.setText("$" + totalMonthlyIncome.setScale(2, RoundingMode.HALF_UP));
         expensesValueLabel.setText("$" + totalMonthlyExpenses.setScale(2, RoundingMode.HALF_UP));
@@ -628,5 +683,99 @@ public class DashboardController {
         Alert alert = new Alert(Alert.AlertType.WARNING);
         alert.setContentText(message);
         alert.showAndWait();
+    }
+    @FXML
+    private void handleOpenDedicatedBillWindow() {
+        Stage stage = new Stage();
+        stage.setTitle("Add Dedicated Bill");
+
+        TextField nameField = new TextField();
+        nameField.setPromptText("Bill name");
+
+        TextField amountField = new TextField();
+        amountField.setPromptText("Amount");
+
+        ComboBox<Recurrence> recurrenceBox = new ComboBox<>();
+        recurrenceBox.getItems().addAll(Recurrence.values());
+
+        ComboBox<BillGroup> billGroupBox = new ComboBox<>();
+        billGroupBox.getItems().addAll(BillGroup.values());
+
+        Button saveButton = new Button("Save");
+        Button cancelButton = new Button("Cancel");
+
+        saveButton.setOnAction(event -> {
+            try {
+                String name = nameField.getText();
+                BigDecimal amount = new BigDecimal(amountField.getText());
+                Recurrence recurrence = recurrenceBox.getValue();
+                BillGroup billGroup = billGroupBox.getValue();
+
+                if (name == null || name.isBlank() || recurrence == null || billGroup == null) {
+                    return;
+                }
+
+                DedicatedBill bill = new DedicatedBill(
+                        name,
+                        amount,
+                        recurrence,
+                        billGroup
+                );
+
+                dedicatedBillDao.save(bill);
+
+                dedicatedBills.clear();
+                dedicatedBills.addAll(dedicatedBillDao.findAll());
+                dedicatedBillsTable.refresh();
+
+                updateTotals();
+                stage.close();
+
+            } catch (NumberFormatException e) {
+                e.printStackTrace();
+            }
+        });
+
+        cancelButton.setOnAction(event -> stage.close());
+
+        HBox buttons = new HBox(10, saveButton, cancelButton);
+
+        VBox layout = new VBox(10,
+                new Label("Bill Name"),
+                nameField,
+
+                new Label("Amount"),
+                amountField,
+
+                new Label("Recurrence"),
+                recurrenceBox,
+
+                new Label("Group"),
+                billGroupBox,
+
+                buttons
+        );
+        layout.setStyle("-fx-padding: 16;");
+
+        stage.setScene(new Scene(layout, 300, 300));
+        stage.show();
+    }
+
+    @FXML
+    private void handleDeleteDedicatedBill() {
+        DedicatedBill selectedBill =
+                dedicatedBillsTable.getSelectionModel().getSelectedItem();
+
+        if (selectedBill == null) {
+            return;
+        }
+
+        dedicatedBillDao.delete(selectedBill);
+
+        dedicatedBills.remove(selectedBill);
+
+        dedicatedBillsTable.refresh();
+
+        updateTotals();
     }
 }

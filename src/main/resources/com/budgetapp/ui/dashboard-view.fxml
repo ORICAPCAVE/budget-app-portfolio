@@ -13,6 +13,7 @@
 <?import javafx.scene.control.DatePicker?>
 <?import javafx.scene.control.TableView?>
 <?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.ScrollPane?>
 <BorderPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.budgetapp.ui.DashboardController">
     <top>
@@ -24,6 +25,8 @@
     </top>
 
     <center>
+        <ScrollPane fitToWidth="true">
+        <content>
         <VBox spacing="16.0" style="-fx-padding: 18;">
             <GridPane hgap="14.0" vgap="14.0">
                 <padding>
@@ -123,6 +126,24 @@
                     </columns>
                 </TableView>
                 <Button text="Delete Selected Income" onAction="#handleDeleteIncome"/>
+
+            </VBox>
+            <VBox spacing="8.0" style="-fx-background-color: #f8fafc; -fx-padding: 16; -fx-border-color: #d9e2ec; -fx-border-radius: 10; -fx-background-radius: 10;">
+                <Label text="Dedicated Bills" style="-fx-font-weight: bold;"/>
+
+                <TableView fx:id="dedicatedBillsTable" prefHeight="180">
+                    <columns>
+                        <TableColumn fx:id="dedicatedBillNameColumn" text="Name"/>
+                        <TableColumn fx:id="dedicatedBillAmountColumn" text="Amount"/>
+                        <TableColumn fx:id="dedicatedBillRecurrenceColumn" text="Recurrence"/>
+                        <TableColumn fx:id="dedicatedBillGroupColumn" text="Group"/>
+                    </columns>
+                </TableView>
+
+                <HBox spacing="10">
+                    <Button text="Add Dedicated Bill" onAction="#handleOpenDedicatedBillWindow"/>
+                    <Button text="Delete Selected Dedicated Bill" onAction="#handleDeleteDedicatedBill"/>
+                </HBox>
             </VBox>
             <TableView fx:id="debtTable">
                 <columns>
@@ -139,5 +160,8 @@
             </TableView>
             <Button text="Delete Selected Debt" onAction="#handleDeleteDebt"/>
         </VBox>
+
+        </content>
+        </ScrollPane>
     </center>
 </BorderPane>

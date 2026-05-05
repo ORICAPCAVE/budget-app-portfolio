@@ -62,9 +62,22 @@ public class DatabaseManager {
            recurrence TEXT NOT NULL
        )
         """);
+            statement.executeUpdate("""
+        CREATE TABLE IF NOT EXISTS dedicated_bill (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            amount NUMERIC NOT NULL,
+            recurrence TEXT NOT NULL,
+            bill_group TEXT NOT NULL
+        )
+        """);
+
+
         } catch (SQLException e) {
             throw new IllegalStateException("Failed to initialize database schema", e);
         }
 
+
     }
+
 }
