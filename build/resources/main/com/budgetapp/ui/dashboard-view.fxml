@@ -48,11 +48,39 @@
                     <Label fx:id="debtPaymentsValueLabel" text="0.00" style="-fx-font-size: 20px;"/>
                 </VBox>
 
-                <VBox spacing="4.0" style="-fx-background-color: #f1f5f9; -fx-padding: 14; -fx-background-radius: 10;" GridPane.columnIndex="1" GridPane.rowIndex="1">
-                    <Label text="Remaining Cash" style="-fx-font-weight: bold;"/>
-                    <Label fx:id="remainingCashValueLabel" text="0.00" style="-fx-font-size: 20px;"/>
-                </VBox>
                 <VBox spacing="4.0"
+                      style="-fx-background-color: #f1f5f9; -fx-padding: 14; -fx-background-radius: 10;"
+                      GridPane.columnIndex="1"
+                      GridPane.rowIndex="1">
+
+                    <Label text="Remaining Cash" style="-fx-font-weight: bold;"/>
+                    <Label fx:id="remainingCashValueLabel"
+                           text="0.00"
+                           style="-fx-font-size: 20px;"/>
+                </VBox>
+
+                <VBox spacing="4.0"
+                      style="-fx-background-color: #f1f5f9; -fx-padding: 14; -fx-background-radius: 10;"
+                      GridPane.columnIndex="2"
+                      GridPane.rowIndex="0">
+
+                    <Label text="Dedicated Bills" style="-fx-font-weight: bold;"/>
+                    <Label fx:id="dedicatedBillsValueLabel"
+                           text="0.00"
+                           style="-fx-font-size: 20px;"/>
+                </VBox>
+
+                <VBox spacing="4.0"
+                      style="-fx-background-color: #f1f5f9; -fx-padding: 14; -fx-background-radius: 10;"
+                      GridPane.columnIndex="2"
+                      GridPane.rowIndex="1">
+
+                    <Label text="Subscriptions" style="-fx-font-weight: bold;"/>
+                    <Label fx:id="subscriptionBillsValueLabel"
+                           text="0.00"
+                           style="-fx-font-size: 20px;"/>
+                </VBox>
+               <!-- <VBox spacing="4.0"
                       style="-fx-background-color: #fef3c7; -fx-padding: 14; -fx-background-radius: 10;"
                       GridPane.columnIndex="2"
                       GridPane.rowIndex="1">
@@ -63,7 +91,7 @@
                     <Label fx:id="payoffInterestLabel" text="Total interest: -" />
                     <Label fx:id="negativeAmortizationLabel" text="Negative amortization: -" />
 
-                </VBox>
+                </VBox>-->
             </GridPane>
 
             <HBox spacing="10.0">
@@ -76,24 +104,28 @@
 
                 <HBox spacing="10" alignment="BOTTOM_LEFT">
                     <VBox spacing="4">
-                        <Label text="Expense Name"/>
-                        <TextField fx:id="nameField" promptText="Expense Name"/>
+                        <!--    <Label text="Expense Name"/>-->
+                     <!--   <TextField fx:id="nameField" promptText="Expense Name"/>-->
                     </VBox>
 
                     <VBox spacing="4">
-                        <Label text="Amount"/>
-                        <TextField fx:id="amountField" promptText="Amount"/>
+<!--                        <Label text="Amount"/>-->
+                       <!-- <TextField fx:id="amountField" promptText="Amount"/>-->
                     </VBox>
 
                     <VBox spacing="4">
-                        <Label text="Frequency"/>
-                        <ComboBox fx:id="recurrenceBox"/>
+<!--                        <Label text="Frequency"/>-->
+                      <!--  <ComboBox fx:id="recurrenceBox"/>-->
                     </VBox>
 
                     <VBox spacing="4">
-                        <Label text="Next Due Date"/>
-                        <DatePicker fx:id="dueDatePicker"/>
+<!--                        <Label text="Next Due Date"/>-->
+                    <!--    <DatePicker fx:id="dueDatePicker"/>-->
                     </VBox>
+<!--                    <VBox spacing="4">-->
+<!--&lt;!&ndash;                        <Label text="Category"/>&ndash;&gt;-->
+<!--                        <ComboBox fx:id="categoryBox"/>-->
+<!--                    </VBox>-->
 
                     <VBox spacing="4">
                         <Label text=" "/>
@@ -111,6 +143,8 @@
                         <TableColumn fx:id="nameColumn" text="Name"/>
                         <TableColumn fx:id="amountColumn" text="Amount"/>
                         <TableColumn fx:id="recurrenceColumn" text="Recurrence"/>
+                        <TableColumn fx:id="expenseDueDateColumn" text="Next Due Date"/>
+                        <TableColumn fx:id="expenseCategoryColumn" text="Category"/>
                     </columns>
                 </TableView>
             </VBox>

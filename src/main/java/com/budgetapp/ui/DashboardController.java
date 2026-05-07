@@ -15,12 +15,14 @@ import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.control.cell.ComboBoxTableCell;
 import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.util.StringConverter;
 import javafx.util.converter.BigDecimalStringConverter;
+import javafx.util.converter.LocalDateStringConverter;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -35,19 +37,24 @@ public class DashboardController {
     @FXML private Label payoffMonthsLabel;
     @FXML private Label payoffInterestLabel;
     @FXML private Label negativeAmortizationLabel;
+    @FXML private Label dedicatedBillsValueLabel;
+    @FXML private Label subscriptionBillsValueLabel;
 
 
     // ===== New Input Fields =====
-    @FXML private TextField nameField;
+
     @FXML private TextField amountField;
-    @FXML private ComboBox<Recurrence> recurrenceBox;
-    @FXML private DatePicker dueDatePicker;
+
+
+
 
     // ===== Table =====
     @FXML private TableView<Expense> expenseTable;
     @FXML private TableColumn<Expense, String> nameColumn;
     @FXML private TableColumn<Expense, BigDecimal> amountColumn;
     @FXML private TableColumn<Expense, Recurrence> recurrenceColumn;
+    @FXML private TableColumn<Expense, LocalDate> expenseDueDateColumn;
+    @FXML private TableColumn<Expense, ExpenseCategory> expenseCategoryColumn;
     @FXML private TableView<Income> incomeTable;
     @FXML private TableColumn<Income, String> incomeSourceColumn;
     @FXML private TableColumn<Income, BigDecimal> incomeAmountColumn;
@@ -66,7 +73,7 @@ public class DashboardController {
     @FXML private TableColumn<DedicatedBill, String> dedicatedBillNameColumn;
     @FXML private TableColumn<DedicatedBill, BigDecimal> dedicatedBillAmountColumn;
     @FXML private TableColumn<DedicatedBill, Recurrence> dedicatedBillRecurrenceColumn;
-    @FXML private TableColumn<DedicatedBill, BillGroup> dedicatedBillGroupColumn;
+    @FXML private TableColumn<DedicatedBill, ExpenseCategory> dedicatedBillGroupColumn;
 
     private final ObservableList<Income> incomes = FXCollections.observableArrayList();
 
@@ -102,7 +109,8 @@ public class DashboardController {
         debtPaymentsValueLabel.setText("$0.00");
         remainingCashValueLabel.setText("$0.00");
 
-        recurrenceBox.getItems().addAll(Recurrence.values());
+
+
 
         nameColumn.setCellValueFactory(data ->
                 new javafx.beans.property.SimpleStringProperty(data.getValue().getName()));
@@ -112,9 +120,48 @@ public class DashboardController {
 
         recurrenceColumn.setCellValueFactory(data ->
                 new javafx.beans.property.SimpleObjectProperty<>(data.getValue().getRecurrence()));
+        recurrenceColumn.setCellFactory(
+                ComboBoxTableCell.forTableColumn(Recurrence.values())
+        );
 
         expenses.addAll(expenseDao.findAll());
         expenseTable.setItems(expenses);
+        expenseTable.setEditable(true);
+
+        amountColumn.setCellFactory(
+                TextFieldTableCell.forTableColumn(new BigDecimalStringConverter())
+        );
+        expenseDueDateColumn.setCellValueFactory(data ->
+                new SimpleObjectProperty<>(data.getValue().getDueDate()));
+        expenseDueDateColumn.setCellFactory(
+                TextFieldTableCell.forTableColumn(new LocalDateStringConverter())
+        );
+        expenseDueDateColumn.setOnEditCommit(event -> {
+            Expense expense = event.getRowValue();
+
+            expense.setDueDate(event.getNewValue());
+
+            expenseDao.update(expense);
+
+            expenseTable.refresh();
+            updateTotals();
+        });
+
+        expenseCategoryColumn.setCellValueFactory(data ->
+                new SimpleObjectProperty<>(data.getValue().getCategory()));
+        expenseCategoryColumn.setCellValueFactory(data ->
+                new SimpleObjectProperty<>(data.getValue().getCategory()));
+
+        amountColumn.setOnEditCommit(event -> {
+            Expense expense = event.getRowValue();
+            BigDecimal newAmount = event.getNewValue();
+
+            expense.setAmount(newAmount);
+            expenseDao.update(expense);
+
+            expenseTable.refresh();
+            updateTotals();
+        });
 
         incomeSourceColumn.setCellValueFactory(data ->
                 new javafx.beans.property.SimpleStringProperty(data.getValue().getSource()));
@@ -284,9 +331,21 @@ public class DashboardController {
 
         dedicatedBillRecurrenceColumn.setCellValueFactory(data ->
                 new SimpleObjectProperty<>(data.getValue().getRecurrence()));
+        recurrenceColumn.setCellFactory(
+                ComboBoxTableCell.forTableColumn(Recurrence.values())
+        );
+
+        recurrenceColumn.setOnEditCommit(event -> {
+            Expense expense = event.getRowValue();
+            expense.setRecurrence(event.getNewValue());
+
+            expenseDao.update(expense);
+            expenseTable.refresh();
+            updateTotals();
+        });
 
         dedicatedBillGroupColumn.setCellValueFactory(data ->
-                new SimpleObjectProperty<>(data.getValue().getBillGroup()));
+                new SimpleObjectProperty<>(data.getValue().getCategory()));
 
         dedicatedBills.clear();
         dedicatedBills.addAll(dedicatedBillDao.findAll());
@@ -306,7 +365,7 @@ public class DashboardController {
         updateTotals();
     }
 
-    @FXML
+  /*  @FXML
     private void handleAddExpense() {
         String name = nameField.getText();
         Recurrence recurrence = recurrenceBox.getValue();
@@ -340,7 +399,7 @@ public class DashboardController {
         amountField.clear();
         recurrenceBox.getSelectionModel().clearSelection();
         dueDatePicker.setValue(null);
-    }
+    }*/
 
     @FXML
     private void handleDeleteExpense() {
@@ -557,10 +616,12 @@ public class DashboardController {
             }
         }
         BigDecimal businessBills =
-                dedicatedBillCalculationService.totalMonthlyForGroup(dedicatedBills, BillGroup.BUSINESS);
+                dedicatedBillCalculationService.totalMonthlyForCategory(
+                        dedicatedBills,
+                        ExpenseCategory.SUBSCRIPTION
+                );
 
-        BigDecimal livingBills =
-                dedicatedBillCalculationService.totalMonthlyForGroup(dedicatedBills, BillGroup.LIVING);
+
 
 
         for (Expense e : expenses) {
@@ -585,78 +646,77 @@ public class DashboardController {
         expensesValueLabel.setText("$" + totalMonthlyExpenses.setScale(2, RoundingMode.HALF_UP));
         debtPaymentsValueLabel.setText("$" + totalMonthlyDebtPayments.setScale(2, RoundingMode.HALF_UP));
         remainingCashValueLabel.setText("$" + remainingCash.setScale(2, RoundingMode.HALF_UP));
+
+        // code for the dedicated bills.
+
     }
     @FXML
     private void handleOpenExpenseWindow() {
         Stage stage = new Stage();
-        stage.setTitle("Add Expense");
 
-        Label nameLabel = new Label("Expense Name");
-        TextField expenseNameField = new TextField();
-        expenseNameField.setPromptText("Rent, Food, Insurance");
+        TextField nameField = new TextField();
+        TextField amountField = new TextField();
 
-        Label amountLabel = new Label("Amount");
-        TextField expenseAmountField = new TextField();
-        expenseAmountField.setPromptText("Amount");
+        ComboBox<Recurrence> recurrenceBox = new ComboBox<>();
+        recurrenceBox.getItems().addAll(Recurrence.values());
 
-        Label recurrenceLabel = new Label("Frequency");
-        ComboBox<Recurrence> expenseRecurrenceBox = new ComboBox<>();
-        expenseRecurrenceBox.getItems().addAll(Recurrence.values());
+        ComboBox<ExpenseCategory> categoryBox = new ComboBox<>();
+        categoryBox.getItems().addAll(ExpenseCategory.values());
 
-        Label dueDateLabel = new Label("Due Date");
-        DatePicker expenseDueDatePicker = new DatePicker();
+        DatePicker dueDatePicker = new DatePicker();
 
-        Button saveButton = new Button("Save Expense");
+        Button saveButton = new Button("Save");
         Button cancelButton = new Button("Cancel");
-        cancelButton.setOnAction(e -> stage.close());
 
-        saveButton.setOnAction(e -> {
-            String name = expenseNameField.getText();
-            Recurrence recurrence = expenseRecurrenceBox.getValue();
-            LocalDate dueDate = expenseDueDatePicker.getValue();
-
-            BigDecimal amount;
+        saveButton.setOnAction(event -> {
             try {
-                amount = new BigDecimal(expenseAmountField.getText().trim());
-            } catch (Exception ex) {
-                showAlert("Invalid expense amount");
-                return;
+                String name = nameField.getText();
+                BigDecimal amount = new BigDecimal(amountField.getText());
+                Recurrence recurrence = recurrenceBox.getValue();
+                ExpenseCategory category = categoryBox.getValue();
+                LocalDate dueDate = dueDatePicker.getValue();
+
+                if (name == null || name.isBlank()
+                        || recurrence == null
+                        || category == null) {
+                    return;
+                }
+
+                Expense expense = new Expense();
+                expense.setName(name);
+                expense.setAmount(amount);
+                expense.setRecurrence(recurrence);
+                expense.setDueDate(dueDate);
+                expense.setCategory(category);
+
+                expenseDao.save(expense);
+
+                expenses.clear();
+                expenses.addAll(expenseDao.findAll());
+
+                updateTotals();
+                stage.close();
+
+            } catch (NumberFormatException ex) {
+                System.out.println("Invalid amount");
             }
-
-            if (name == null || name.isBlank() || recurrence == null || dueDate == null) {
-                showAlert("Fill all expense fields");
-                return;
-            }
-
-            Expense expense = new Expense();
-            expense.setName(name);
-            expense.setAmount(amount);
-            expense.setRecurrence(recurrence);
-            expense.setDueDate(dueDate);
-
-            expense.setCategory(ExpenseCategory.OTHER);
-            expenseDao.save(expense);
-            expenses.clear();
-            expenses.addAll(expenseDao.findAll());
-            expenseTable.refresh();
-            updateTotals();
-
-            stage.close();
         });
 
-        HBox buttonRow = new HBox(10, saveButton, cancelButton);
+        cancelButton.setOnAction(event -> stage.close());
 
-        VBox root = new VBox(10,
-                nameLabel, expenseNameField,
-                amountLabel, expenseAmountField,
-                recurrenceLabel, expenseRecurrenceBox,
-                dueDateLabel, expenseDueDatePicker,
-                buttonRow
+        VBox layout = new VBox(10,
+                new Label("Expense Name"), nameField,
+                new Label("Amount"), amountField,
+                new Label("Frequency"), recurrenceBox,
+                new Label("Category"), categoryBox,
+                new Label("Due Date"), dueDatePicker,
+                new HBox(10, saveButton, cancelButton)
         );
 
-        root.setPadding(new Insets(15));
+        layout.setPadding(new Insets(16));
 
-        stage.setScene(new Scene(root, 320, 320));
+        stage.setScene(new Scene(layout, 350, 400));
+        stage.setTitle("Add Expense");
         stage.show();
     }
 
@@ -695,6 +755,9 @@ public class DashboardController {
         TextField amountField = new TextField();
         amountField.setPromptText("Amount");
 
+        ComboBox<ExpenseCategory> categoryBox = new ComboBox<>();
+        categoryBox.getItems().addAll(ExpenseCategory.values());
+
         ComboBox<Recurrence> recurrenceBox = new ComboBox<>();
         recurrenceBox.getItems().addAll(Recurrence.values());
 
@@ -709,9 +772,9 @@ public class DashboardController {
                 String name = nameField.getText();
                 BigDecimal amount = new BigDecimal(amountField.getText());
                 Recurrence recurrence = recurrenceBox.getValue();
-                BillGroup billGroup = billGroupBox.getValue();
+                ExpenseCategory category = categoryBox.getValue();
 
-                if (name == null || name.isBlank() || recurrence == null || billGroup == null) {
+                if (name == null || name.isBlank() || recurrence == null || category == null) {
                     return;
                 }
 
@@ -719,7 +782,7 @@ public class DashboardController {
                         name,
                         amount,
                         recurrence,
-                        billGroup
+                        category
                 );
 
                 dedicatedBillDao.save(bill);

@@ -1,6 +1,7 @@
 package com.budgetapp.dao;
 
 import com.budgetapp.model.Expense;
+import com.budgetapp.model.ExpenseCategory;
 import com.budgetapp.model.Recurrence;
 
 import java.math.BigDecimal;
@@ -33,7 +34,17 @@ public class ExpenseDao {
                 if (date != null) {
                     e.setDueDate(LocalDate.parse(date));
                 }
+                String category = rs.getString("category");
 
+                try {
+                    if (category != null && !category.isBlank()) {
+                        e.setCategory(ExpenseCategory.valueOf(category));
+                    } else {
+                        e.setCategory(ExpenseCategory.INCIDENTAL);
+                    }
+                } catch (IllegalArgumentException ex) {
+                    e.setCategory(ExpenseCategory.INCIDENTAL);
+                }
                 list.add(e);
             }
 
@@ -57,7 +68,9 @@ public class ExpenseDao {
             ps.setBigDecimal(2, expense.getAmount());
             ps.setString(3, expense.getRecurrence().name());
             ps.setString(4, expense.getDueDate() != null ? expense.getDueDate().toString() : null);
-            ps.setString(5, "GENERAL"); // simple for now
+            ps.setString(5, expense.getCategory() != null
+                    ? expense.getCategory().name()
+                    : ExpenseCategory.INCIDENTAL.name());
 
             ps.executeUpdate();
 
@@ -79,4 +92,45 @@ public class ExpenseDao {
             e.printStackTrace();
         }
     }
+    public void update(Expense expense) {
+        String sql = """
+            UPDATE expense
+            SET name = ?,
+                amount = ?,
+                recurrence = ?,
+                due_date = ?,
+                category = ?
+            WHERE id = ?
+            """;
+
+        try (Connection conn = db.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, expense.getName());
+            ps.setBigDecimal(2, expense.getAmount());
+            ps.setString(3, expense.getRecurrence().name());
+
+            if (expense.getDueDate() != null) {
+                ps.setString(4, expense.getDueDate().toString());
+            } else {
+                ps.setNull(4, Types.VARCHAR);
+            }
+
+            ExpenseCategory category = expense.getCategory();
+
+            if (category == null) {
+                category = ExpenseCategory.INCIDENTAL;
+            }
+
+            ps.setString(5, category.name());
+
+            ps.setLong(6, expense.getId());
+
+            ps.executeUpdate();
+
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to update expense", e);
+        }
+    }
+
 }

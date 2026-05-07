@@ -68,7 +68,7 @@ public class DatabaseManager {
             name TEXT NOT NULL,
             amount NUMERIC NOT NULL,
             recurrence TEXT NOT NULL,
-            bill_group TEXT NOT NULL
+            category TEXT NOT NULL
         )
         """);
 

@@ -8,23 +8,23 @@ public class DedicatedBill {
     private String name;
     private BigDecimal amount;
     private Recurrence recurrence;
-    private BillGroup billGroup;
+    private ExpenseCategory category;
 
     public DedicatedBill(long id, String name, BigDecimal amount,
-                         Recurrence recurrence, BillGroup billGroup) {
+                         Recurrence recurrence, ExpenseCategory category) {
         this.id = id;
         this.name = name;
         this.amount = amount;
         this.recurrence = recurrence;
-        this.billGroup = billGroup;
+        this.category = category;
     }
 
     public DedicatedBill(String name, BigDecimal amount,
-                         Recurrence recurrence, BillGroup billGroup) {
+                         Recurrence recurrence, ExpenseCategory category) {
         this.name = name;
         this.amount = amount;
         this.recurrence = recurrence;
-        this.billGroup = billGroup;
+        this.category = category;
     }
 
     public long getId() {
@@ -43,8 +43,8 @@ public class DedicatedBill {
         return recurrence;
     }
 
-    public BillGroup getBillGroup() {
-        return billGroup;
+    public ExpenseCategory getCategory() {
+        return category;
     }
 
     public void setId(long id) {
@@ -63,7 +63,7 @@ public class DedicatedBill {
         this.recurrence = recurrence;
     }
 
-    public void setBillGroup(BillGroup billGroup) {
-        this.billGroup = billGroup;
+    public void setBillGroup(ExpenseCategory category) {
+        this.category = category;
     }
 }
