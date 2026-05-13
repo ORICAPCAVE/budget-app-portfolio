@@ -7,6 +7,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -31,6 +32,13 @@ public class DebtDao {
                 debt.setInterestRate(rs.getBigDecimal("interest_rate"));
                 debt.setMinimumPayment(rs.getBigDecimal("minimum_payment"));
                 debt.setRecurrence(Recurrence.valueOf(rs.getString("recurrence")));
+                String nextDueDateText = rs.getString("next_due_date");
+
+                if (nextDueDateText != null && !nextDueDateText.isBlank()) {
+                    debt.setNextDueDate(LocalDate.parse(nextDueDateText));
+                }
+
+                debt.setPaid(rs.getInt("paid") == 1);
 
                 list.add(debt);
             }
@@ -64,10 +72,11 @@ public class DebtDao {
             e.printStackTrace();
         }
     }
+
     private void insert(Debt debt) {
         String sql = """
-        INSERT INTO debt(name, amount, interest_rate, minimum_payment, recurrence)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO debt(name, amount, interest_rate, minimum_payment, recurrence, next_due_date, paid)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
     """;
 
         try (Connection conn = db.getConnection();
@@ -78,6 +87,8 @@ public class DebtDao {
             ps.setBigDecimal(3, debt.getInterestRate());
             ps.setBigDecimal(4, debt.getMinimumPayment());
             ps.setString(5, debt.getRecurrence().name());
+            ps.setString(6, debt.getNextDueDate().toString());
+            ps.setInt(7, debt.isPaid() ? 1 : 0);
 
             ps.executeUpdate();
 
@@ -91,10 +102,11 @@ public class DebtDao {
             e.printStackTrace();
         }
     }
-    private void update(Debt debt) {
+
+    public void update(Debt debt) {
         String sql = """
         UPDATE debt
-        SET name = ?, amount = ?, interest_rate = ?, minimum_payment = ?, recurrence = ?
+        SET name = ?, amount = ?, interest_rate = ?, minimum_payment = ?, recurrence = ?, next_due_date = ?, paid = ?
         WHERE id = ?
     """;
 
@@ -106,7 +118,15 @@ public class DebtDao {
             ps.setBigDecimal(3, debt.getInterestRate());
             ps.setBigDecimal(4, debt.getMinimumPayment());
             ps.setString(5, debt.getRecurrence().name());
-            ps.setLong(6, debt.getId());
+
+            if (debt.getNextDueDate() != null) {
+                ps.setString(6, debt.getNextDueDate().toString());
+            } else {
+                ps.setString(6, null);
+            }
+
+            ps.setInt(7, debt.isPaid() ? 1 : 0);
+            ps.setLong(8, debt.getId());
 
             ps.executeUpdate();
 

@@ -7,6 +7,7 @@ import com.budgetapp.dao.IncomeDao;
 import com.budgetapp.model.*;
 import com.budgetapp.service.DebtCalculationService;
 import com.budgetapp.service.DedicatedBillCalculationService;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -27,6 +28,8 @@ import javafx.util.converter.LocalDateStringConverter;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+
 public class DashboardController {
 
     // ===== Existing Labels =====
@@ -39,6 +42,7 @@ public class DashboardController {
     @FXML private Label negativeAmortizationLabel;
     @FXML private Label suggestedPaymentLabel;
     @FXML private Label payoffDebtNameLabel;
+    @FXML private VBox debtLegendBox;
     @FXML private Label dedicatedBillsValueLabel;
 /*
     @FXML private Label subscriptionBillsValueLabel;
@@ -72,6 +76,8 @@ public class DashboardController {
     @FXML private TableColumn<Debt, String> debtMonthsColumn;
     @FXML private TableColumn<Debt, String> debtInterestPaidColumn;
     @FXML private TableColumn<Debt, String> debtNegativeAmColumn;
+    @FXML private TableColumn<Debt, LocalDate> debtNextDueDateColumn;
+    @FXML private TableColumn<Debt, Boolean> debtPaidColumn;
     @FXML private TableColumn<Income, String> incomeReceivedDateColumn;
     @FXML private TableView<DedicatedBill> dedicatedBillsTable;
     @FXML private TableColumn<DedicatedBill, String> dedicatedBillNameColumn;
@@ -249,6 +255,20 @@ public class DashboardController {
         debts.addAll(debtDao.findAll());
         debtTable.setItems(debts);
         debtTable.setEditable(true);
+        Label redLegend = new Label("● Due Soon (< 7 days)");
+        redLegend.setStyle("-fx-text-fill: red; -fx-font-weight: bold;");
+
+        Label orangeLegend = new Label("● Upcoming (< 15 days)");
+        orangeLegend.setStyle("-fx-text-fill: orange; -fx-font-weight: bold;");
+
+        Label greenLegend = new Label("● Current");
+        greenLegend.setStyle("-fx-text-fill: green; -fx-font-weight: bold;");
+
+        debtLegendBox.getChildren().addAll(
+                greenLegend,
+                orangeLegend,
+                redLegend
+        );
 
         System.out.println("Debt table initialized. Loaded debts = " + debts.size());
 
@@ -307,37 +327,72 @@ public class DashboardController {
 
         });
 
-      /*  dedicatedBillNameColumn.setCellValueFactory(data ->
-                new SimpleStringProperty(data.getValue().getName()));
-
-        dedicatedBillsTable.setEditable(true);
-
-        dedicatedBillAmountColumn.setCellValueFactory(data ->
-                new SimpleObjectProperty<>(data.getValue().getAmount()));
-
-        dedicatedBillAmountColumn.setCellFactory(
-                TextFieldTableCell.forTableColumn(new BigDecimalStringConverter())
+        debtNextDueDateColumn.setCellValueFactory(data ->
+                new SimpleObjectProperty<>(data.getValue().getNextDueDate())
         );
 
-        dedicatedBillAmountColumn.setOnEditCommit(event -> {
-            DedicatedBill bill = event.getRowValue();
+        debtNextDueDateColumn.setCellFactory(column -> new TableCell<>() {
+            @Override
+            protected void updateItem(LocalDate dueDate, boolean empty) {
+                super.updateItem(dueDate, empty);
 
-            try {
-                BigDecimal newAmount = event.getNewValue();
+                if (empty || dueDate == null) {
+                    setText(null);
+                    setStyle("");
+                    return;
+                }
 
-                if (newAmount == null) return;
+                setText(dueDate.toString());
 
-                bill.setAmount(newAmount);
-                dedicatedBillDao.update(bill);
+                long daysUntilDue = ChronoUnit.DAYS.between(LocalDate.now(), dueDate);
 
-                updateTotals();
-            } catch (Exception e) {
-                dedicatedBillsTable.refresh(); // revert bad edit
+                if (daysUntilDue < 7) {
+                    setStyle("-fx-text-fill: red; -fx-font-weight: bold;");
+                } else if (daysUntilDue < 15) {
+                    setStyle("-fx-text-fill: orange; -fx-font-weight: bold;");
+                } else {
+                    setStyle("-fx-text-fill: green; -fx-font-weight: bold;");
+                }
             }
-        });*/
+        });
+        debtPaidColumn.setCellValueFactory(data ->
+                new SimpleBooleanProperty(data.getValue().isPaid())
+        );
 
-       /* dedicatedBillRecurrenceColumn.setCellValueFactory(data ->
-                new SimpleObjectProperty<>(data.getValue().getRecurrence()));*/
+        debtPaidColumn.setCellFactory(column -> new TableCell<>() {
+            private final Button paidButton = new Button("✓");
+
+            {
+                paidButton.setStyle("-fx-text-fill: green; -fx-font-weight: bold;");
+
+                paidButton.setOnAction(e -> {
+                    Debt debt = getTableView().getItems().get(getIndex());
+
+                    LocalDate currentDueDate = debt.getNextDueDate();
+
+                    if (currentDueDate != null) {
+                        debt.setNextDueDate(currentDueDate.plusMonths(1));
+                    }
+
+                    debt.setPaid(true);
+
+                    debtDao.update(debt);
+                    debtTable.refresh();
+                    updateTotals();
+                });
+            }
+
+            @Override
+            protected void updateItem(Boolean paid, boolean empty) {
+                super.updateItem(paid, empty);
+
+                if (empty) {
+                    setGraphic(null);
+                } else {
+                    setGraphic(paidButton);
+                }
+            }
+        });
         recurrenceColumn.setCellFactory(
                 ComboBoxTableCell.forTableColumn(Recurrence.values())
         );
@@ -373,41 +428,7 @@ public class DashboardController {
         updateTotals();
     }
 
-  /*  @FXML
-    private void handleAddExpense() {
-        String name = nameField.getText();
-        Recurrence recurrence = recurrenceBox.getValue();
-        LocalDate dueDate = dueDatePicker.getValue();
 
-        BigDecimal amount;
-        try {
-            amount = new BigDecimal(amountField.getText().trim());
-        } catch (Exception e) {
-            showAlert("Invalid amount");
-            return;
-        }
-
-        if (name.isEmpty() || recurrence == null || dueDate == null) {
-            showAlert("Fill all fields");
-            return;
-        }
-
-        Expense expense = new Expense();
-        expense.setName(name);
-        expense.setAmount(amount);
-        expense.setRecurrence(recurrence);
-        expense.setDueDate(dueDate);
-
-        expenses.add(expense);
-        expenseDao.save(expense);
-
-        updateTotals();
-
-        nameField.clear();
-        amountField.clear();
-        recurrenceBox.getSelectionModel().clearSelection();
-        dueDatePicker.setValue(null);
-    }*/
 
     @FXML
     private void handleDeleteExpense() {
@@ -496,7 +517,7 @@ public class DashboardController {
     }
     @FXML
     private void handleOpenDebtWindow() {
-        Stage stage = new Stage();
+         Stage stage = new Stage();
         stage.setTitle("Add Debt");
 
         Label nameLabel = new Label("Debt Name");
@@ -511,13 +532,14 @@ public class DashboardController {
         TextField debtRateField = new TextField();
         debtRateField.setPromptText("APR, e.g. 18.99");
 
-        Label minPaymentLabel = new Label("Minimum Payment");
+        Label minPaymentLabel = new Label("Monthly");
         TextField debtMinPaymentField = new TextField();
         debtMinPaymentField.setPromptText("Minimum payment");
 
-        Label recurrenceLabel = new Label("Frequency");
-        ComboBox<Recurrence> debtRecurrenceBox = new ComboBox<>();
-        debtRecurrenceBox.getItems().addAll(Recurrence.values());
+      //  Label recurrenceLabel = new Label("Monthly Payment");
+
+        Label dueDateLabel = new Label("Next Payment Due");
+        DatePicker debtDueDatePicker = new DatePicker();
 
         Button saveButton = new Button("Save Debt");
         Button cancelButton = new Button("Cancel");
@@ -525,7 +547,7 @@ public class DashboardController {
 
         saveButton.setOnAction(e -> {
             String name = nameField.getText();
-            Recurrence recurrence = debtRecurrenceBox.getValue();
+
 
             BigDecimal amount;
             BigDecimal interestRate;
@@ -539,8 +561,10 @@ public class DashboardController {
                 showAlert("Enter valid numbers for amount, interest rate, and minimum payment.");
                 return;
             }
+            LocalDate nextDueDate = debtDueDatePicker.getValue();
 
-            if (name == null || name.isBlank() || recurrence == null) {
+
+            if (name == null || name.isBlank() || nextDueDate == null) {
                 showAlert("Fill all debt fields.");
                 return;
             }
@@ -550,7 +574,9 @@ public class DashboardController {
             debt.setAmount(amount);
             debt.setInterestRate(interestRate);
             debt.setMinimumPayment(minimumPayment);
-            debt.setRecurrence(recurrence);
+            debt.setRecurrence(Recurrence.MONTHLY);
+            debt.setNextDueDate(nextDueDate);
+            debt.setPaid(false);
 
             debtDao.save(debt);
             refreshDebts();
@@ -565,7 +591,8 @@ public class DashboardController {
                 amountLabel, debtAmountField,
                 rateLabel, debtRateField,
                 minPaymentLabel, debtMinPaymentField,
-                recurrenceLabel, debtRecurrenceBox,
+                dueDateLabel, debtDueDatePicker,
+               // recurrenceLabel,
                 buttonRow
         );
 
@@ -606,11 +633,13 @@ public class DashboardController {
         PayoffResult result = service.calculatePayoff(selected);
 
         if (result.negativeAmortization()) {
+           payoffDebtNameLabel.setStyle("-fx-text-fill: red; -fx-font-weight: bold;-fx-font-size: 18px;");
             payoffMonthsLabel.setText("Will Not Pay Off");
             payoffInterestLabel.setText("Payment is too low to cover interest.");
             negativeAmortizationLabel.setText("Balance will continue growing each month.");
 
         } else {
+           payoffDebtNameLabel.setStyle("-fx-text-fill: green; -fx-font-weight: bold;-fx-font-size: 18px;");
             payoffMonthsLabel.setText(result.monthsToPayoff() + " months");
             payoffInterestLabel.setText("$" + result.totalInterestPaid());
             negativeAmortizationLabel.setText("Estimated total interest paid.");
@@ -655,27 +684,17 @@ public class DashboardController {
                 totalMonthlyIncome = totalMonthlyIncome.add(income.getAmount());
             }
         }
-       /* BigDecimal businessBills =
-                dedicatedBillCalculationService.totalMonthlyForCategory(
-                        dedicatedBills,
-                        ExpenseCategory.SUBSCRIPTION
-                );*/
-
-
-
 
         for (Expense e : expenses) {
             if (e.getAmount() != null) {
                 totalMonthlyExpenses = totalMonthlyExpenses.add(e.getAmount());
             }
         }
-
-       /* for (DedicatedBill bill : dedicatedBills) {
-            if (bill.getAmount() != null) {
-                totalMonthlyDedicatedBills =
-                        totalMonthlyDedicatedBills.add(bill.getAmount());
+        for (Debt debt : debts) {
+            if (debt.getMinimumPayment() != null) {
+                totalMonthlyDebtPayments = totalMonthlyDebtPayments.add(debt.getMinimumPayment());
             }
-        }*/
+        }
 
         BigDecimal remainingCash = totalMonthlyIncome
                 .subtract(totalMonthlyExpenses)

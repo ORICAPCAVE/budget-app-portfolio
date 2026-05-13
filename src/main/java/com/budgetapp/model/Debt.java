@@ -10,6 +10,8 @@ public class Debt {
     private Recurrence recurrence;
     private BigDecimal interestRate;
     private BigDecimal minimumPayment;
+    private LocalDate nextDueDate;
+    private boolean paid;
 
     public Debt(String name, BigDecimal amount, Recurrence recurrence,
                 BigDecimal interestRate, BigDecimal minimumPayment) {
@@ -54,6 +56,7 @@ public class Debt {
         return recurrence;
     }
 
+
     public BigDecimal getInterestRate() {
         return interestRate;
     }
@@ -69,4 +72,20 @@ public class Debt {
     public void setMinimumPayment(BigDecimal minimumPayment) {
         this.minimumPayment = minimumPayment;
     }
+    public LocalDate getNextDueDate() {
+        return nextDueDate;
+    }
+
+    public void setNextDueDate(LocalDate nextDueDate) {
+        this.nextDueDate = nextDueDate;
+    }
+
+    public boolean isPaid() {
+        return paid;
+    }
+
+    public void setPaid(boolean paid) {
+        this.paid = paid;
+    }
+
 }

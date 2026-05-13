@@ -48,7 +48,30 @@
                            style="-fx-font-size: 20px;"/>
                 </VBox>
             </GridPane>
+            <VBox spacing="8.0" style="-fx-background-color: #f8fafc; -fx-padding: 16;">
+                <Label text="Income" style="-fx-font-weight: bold;"/>
+                <HBox spacing="10" alignment="BOTTOM_LEFT">
 
+                    <VBox spacing="4">
+                        <Label text=" "/>
+                        <Button text="Add Income" onAction="#handleOpenIncomeWindow"/>
+                    </VBox>
+
+                    <VBox spacing="4">
+                        <Label text=" "/>
+                        <Button text="Delete Selected Income" onAction="#handleDeleteIncome"/>
+                    </VBox>
+                </HBox>
+                <TableView fx:id="incomeTable" prefHeight="180"
+                           maxHeight="180">
+                    <columns>
+                        <TableColumn fx:id="incomeSourceColumn" text="Source"/>
+                        <TableColumn fx:id="incomeAmountColumn" text="Amount"/>
+                        <TableColumn fx:id="incomeRecurrenceColumn" text="Recurrence"/>
+                        <TableColumn fx:id="incomeReceivedDateColumn" text="Date"  />
+                    </columns>
+                </TableView>
+            </VBox>
             <VBox spacing="8.0" style="-fx-background-color: #f8fafc; -fx-padding: 16; -fx-border-color: #d9e2ec; -fx-border-radius: 10; -fx-background-radius: 10;">
                 <Label text="Expenses" style="-fx-font-weight: bold;"/>
                 <HBox spacing="10" alignment="BOTTOM_LEFT">
@@ -64,7 +87,8 @@
                     </VBox>
                 </HBox>
 
-                <TableView fx:id="expenseTable">
+                <TableView fx:id="expenseTable" prefHeight="180"
+                           maxHeight="180">
                     <columns>
                         <TableColumn fx:id="nameColumn" text="Name"/>
                         <TableColumn fx:id="amountColumn" text="Amount"/>
@@ -75,37 +99,12 @@
                 </TableView>
             </VBox>
             <VBox spacing="8.0" style="-fx-background-color: #f8fafc; -fx-padding: 16;">
-                <Label text="Income" style="-fx-font-weight: bold;"/>
-                <HBox spacing="10" alignment="BOTTOM_LEFT">
-
-                    <VBox spacing="4">
-                        <Label text=" "/>
-                        <Button text="Add Income" onAction="#handleOpenIncomeWindow"/>
-                    </VBox>
-
-                    <VBox spacing="4">
-                        <Label text=" "/>
-                        <Button text="Delete Selected Income" onAction="#handleDeleteIncome"/>
-                    </VBox>
-                </HBox>
-                <TableView fx:id="incomeTable">
-                    <columns>
-                        <TableColumn fx:id="incomeSourceColumn" text="Source"/>
-                        <TableColumn fx:id="incomeAmountColumn" text="Amount"/>
-                        <TableColumn fx:id="incomeRecurrenceColumn" text="Recurrence"/>
-                        <TableColumn fx:id="incomeReceivedDateColumn" text="Date"  />
-                    </columns>
-                </TableView>
-            </VBox>
-            <VBox spacing="8.0" style="-fx-background-color: #f8fafc; -fx-padding: 16;">
                 <Label text="Debts" style="-fx-font-weight: bold;"/>
                 <HBox spacing="10" alignment="BOTTOM_LEFT">
-
                     <VBox spacing="4">
                         <Label text=" "/>
                         <Button text="Add Debt" onAction="#handleOpenDebtWindow"/>
                     </VBox>
-
                     <VBox spacing="4">
                         <Label text=" "/>
                         <Button text="Delete Selected Debt" onAction="#handleDeleteDebt"/>
@@ -126,18 +125,31 @@
                         <Label fx:id="suggestedPaymentLabel" text=""/>
 
                     </VBox>
+                    <HBox spacing="20" alignment="CENTER_LEFT">
+
+                        <Region HBox.hgrow="ALWAYS"/>
+
+                        <VBox fx:id="debtLegendBox"
+                              spacing="5"
+                              alignment="CENTER_LEFT"/>
+
+                    </HBox>
                 </HBox>
 
-                <TableView fx:id="debtTable">
+                <TableView fx:id="debtTable" prefHeight="180"
+                           maxHeight="180">
+
                 <columns>
                     <TableColumn fx:id="debtNameColumn" text="Debt Name"/>
                     <TableColumn fx:id="debtAmountColumn" text="Balance"/>
                     <TableColumn fx:id="debtRateColumn" text="Interest Rate"/>
                     <TableColumn fx:id="debtMinPaymentColumn" text="Min Payment"/>
-                    <TableColumn fx:id="debtRecurrenceColumn" text="Frequency"/>
+                    <TableColumn fx:id="debtRecurrenceColumn" text="Monthly Payment"/>
                     <TableColumn fx:id="debtMonthsColumn" text="Months" />
                     <TableColumn fx:id="debtInterestPaidColumn" text="Total Interest" />
                     <TableColumn fx:id="debtNegativeAmColumn" text="Status" />
+                    <TableColumn fx:id="debtNextDueDateColumn" text="Next Payment Due"/>
+                    <TableColumn fx:id="debtPaidColumn" text="Paid"/>
 
                 </columns>
             </TableView>

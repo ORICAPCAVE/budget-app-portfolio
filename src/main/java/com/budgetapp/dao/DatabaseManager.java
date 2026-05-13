@@ -59,7 +59,9 @@ public class DatabaseManager {
            amount DECIMAL(10,2) NOT NULL,
            interest_rate DECIMAL(10,2) NOT NULL,
            minimum_payment DECIMAL(10,2) NOT NULL,
-           recurrence TEXT NOT NULL
+           recurrence TEXT NOT NULL,
+           next_due_date TEXT,
+           paid INTEGER DEFAULT 0
        )
         """);
             statement.executeUpdate("""
