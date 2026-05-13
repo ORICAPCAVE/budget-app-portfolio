@@ -1,19 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.geometry.Insets?>
-<?import javafx.scene.control.Button?>
-<?import javafx.scene.control.Label?>
-<?import javafx.scene.layout.BorderPane?>
-<?import javafx.scene.layout.GridPane?>
-<?import javafx.scene.layout.HBox?>
-<?import javafx.scene.layout.VBox?>
-
-<?import javafx.scene.control.TextField?>
-<?import javafx.scene.control.ComboBox?>
-<?import javafx.scene.control.DatePicker?>
-<?import javafx.scene.control.TableView?>
-<?import javafx.scene.control.TableColumn?>
-<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
 <BorderPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.budgetapp.ui.DashboardController">
     <top>
@@ -58,74 +47,11 @@
                            text="0.00"
                            style="-fx-font-size: 20px;"/>
                 </VBox>
-
-                <VBox spacing="4.0"
-                      style="-fx-background-color: #f1f5f9; -fx-padding: 14; -fx-background-radius: 10;"
-                      GridPane.columnIndex="2"
-                      GridPane.rowIndex="0">
-
-                    <Label text="Dedicated Bills" style="-fx-font-weight: bold;"/>
-                    <Label fx:id="dedicatedBillsValueLabel"
-                           text="0.00"
-                           style="-fx-font-size: 20px;"/>
-                </VBox>
-
-                <VBox spacing="4.0"
-                      style="-fx-background-color: #f1f5f9; -fx-padding: 14; -fx-background-radius: 10;"
-                      GridPane.columnIndex="2"
-                      GridPane.rowIndex="1">
-
-                    <Label text="Subscriptions" style="-fx-font-weight: bold;"/>
-                    <Label fx:id="subscriptionBillsValueLabel"
-                           text="0.00"
-                           style="-fx-font-size: 20px;"/>
-                </VBox>
-               <!-- <VBox spacing="4.0"
-                      style="-fx-background-color: #fef3c7; -fx-padding: 14; -fx-background-radius: 10;"
-                      GridPane.columnIndex="2"
-                      GridPane.rowIndex="1">
-
-                    <Label text="Payoff Report" style="-fx-font-weight: bold;" />
-
-                    <Label fx:id="payoffMonthsLabel" text="Months to payoff: -" />
-                    <Label fx:id="payoffInterestLabel" text="Total interest: -" />
-                    <Label fx:id="negativeAmortizationLabel" text="Negative amortization: -" />
-
-                </VBox>-->
             </GridPane>
 
-            <HBox spacing="10.0">
-                <Button text="Add Income" onAction="#handleOpenIncomeWindow"/>
-                <Button text="Add Debt" onAction="#handleOpenDebtWindow"/>
-                <Button text="Run Payoff Report" onAction="#handleRunPayoffReport"/>
-            </HBox>
-
             <VBox spacing="8.0" style="-fx-background-color: #f8fafc; -fx-padding: 16; -fx-border-color: #d9e2ec; -fx-border-radius: 10; -fx-background-radius: 10;">
-
+                <Label text="Expenses" style="-fx-font-weight: bold;"/>
                 <HBox spacing="10" alignment="BOTTOM_LEFT">
-                    <VBox spacing="4">
-                        <!--    <Label text="Expense Name"/>-->
-                     <!--   <TextField fx:id="nameField" promptText="Expense Name"/>-->
-                    </VBox>
-
-                    <VBox spacing="4">
-<!--                        <Label text="Amount"/>-->
-                       <!-- <TextField fx:id="amountField" promptText="Amount"/>-->
-                    </VBox>
-
-                    <VBox spacing="4">
-<!--                        <Label text="Frequency"/>-->
-                      <!--  <ComboBox fx:id="recurrenceBox"/>-->
-                    </VBox>
-
-                    <VBox spacing="4">
-<!--                        <Label text="Next Due Date"/>-->
-                    <!--    <DatePicker fx:id="dueDatePicker"/>-->
-                    </VBox>
-<!--                    <VBox spacing="4">-->
-<!--&lt;!&ndash;                        <Label text="Category"/>&ndash;&gt;-->
-<!--                        <ComboBox fx:id="categoryBox"/>-->
-<!--                    </VBox>-->
 
                     <VBox spacing="4">
                         <Label text=" "/>
@@ -150,7 +76,18 @@
             </VBox>
             <VBox spacing="8.0" style="-fx-background-color: #f8fafc; -fx-padding: 16;">
                 <Label text="Income" style="-fx-font-weight: bold;"/>
+                <HBox spacing="10" alignment="BOTTOM_LEFT">
 
+                    <VBox spacing="4">
+                        <Label text=" "/>
+                        <Button text="Add Income" onAction="#handleOpenIncomeWindow"/>
+                    </VBox>
+
+                    <VBox spacing="4">
+                        <Label text=" "/>
+                        <Button text="Delete Selected Income" onAction="#handleDeleteIncome"/>
+                    </VBox>
+                </HBox>
                 <TableView fx:id="incomeTable">
                     <columns>
                         <TableColumn fx:id="incomeSourceColumn" text="Source"/>
@@ -159,27 +96,39 @@
                         <TableColumn fx:id="incomeReceivedDateColumn" text="Date"  />
                     </columns>
                 </TableView>
-                <Button text="Delete Selected Income" onAction="#handleDeleteIncome"/>
-
             </VBox>
-            <VBox spacing="8.0" style="-fx-background-color: #f8fafc; -fx-padding: 16; -fx-border-color: #d9e2ec; -fx-border-radius: 10; -fx-background-radius: 10;">
-                <Label text="Dedicated Bills" style="-fx-font-weight: bold;"/>
+            <VBox spacing="8.0" style="-fx-background-color: #f8fafc; -fx-padding: 16;">
+                <Label text="Debts" style="-fx-font-weight: bold;"/>
+                <HBox spacing="10" alignment="BOTTOM_LEFT">
 
-                <TableView fx:id="dedicatedBillsTable" prefHeight="180">
-                    <columns>
-                        <TableColumn fx:id="dedicatedBillNameColumn" text="Name"/>
-                        <TableColumn fx:id="dedicatedBillAmountColumn" text="Amount"/>
-                        <TableColumn fx:id="dedicatedBillRecurrenceColumn" text="Recurrence"/>
-                        <TableColumn fx:id="dedicatedBillGroupColumn" text="Group"/>
-                    </columns>
-                </TableView>
+                    <VBox spacing="4">
+                        <Label text=" "/>
+                        <Button text="Add Debt" onAction="#handleOpenDebtWindow"/>
+                    </VBox>
 
-                <HBox spacing="10">
-                    <Button text="Add Dedicated Bill" onAction="#handleOpenDedicatedBillWindow"/>
-                    <Button text="Delete Selected Dedicated Bill" onAction="#handleDeleteDedicatedBill"/>
+                    <VBox spacing="4">
+                        <Label text=" "/>
+                        <Button text="Delete Selected Debt" onAction="#handleDeleteDebt"/>
+                    </VBox>
+                    <VBox spacing="4">
+                        <Label text=" "/>
+                        <Button text="Run Payoff Report" onAction="#handleRunPayoffReport"/>
+                    </VBox>
+                    <VBox spacing="6" style="-fx-padding: 10; -fx-background-color: #f4f4f4; -fx-border-color: #cccccc;">
+
+                        <Label text="Payoff Report" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+                        <Label fx:id="payoffDebtNameLabel"
+                               text="Debt Name"
+                               style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
+                        <Label fx:id="payoffMonthsLabel" text="Select a debt and run payoff report."/>
+                        <Label fx:id="payoffInterestLabel" text=""/>
+                        <Label fx:id="negativeAmortizationLabel" text=""/>
+                        <Label fx:id="suggestedPaymentLabel" text=""/>
+
+                    </VBox>
                 </HBox>
-            </VBox>
-            <TableView fx:id="debtTable">
+
+                <TableView fx:id="debtTable">
                 <columns>
                     <TableColumn fx:id="debtNameColumn" text="Debt Name"/>
                     <TableColumn fx:id="debtAmountColumn" text="Balance"/>
@@ -188,14 +137,14 @@
                     <TableColumn fx:id="debtRecurrenceColumn" text="Frequency"/>
                     <TableColumn fx:id="debtMonthsColumn" text="Months" />
                     <TableColumn fx:id="debtInterestPaidColumn" text="Total Interest" />
-                    <TableColumn fx:id="debtNegativeAmColumn" text="Neg Am?" />
+                    <TableColumn fx:id="debtNegativeAmColumn" text="Status" />
 
                 </columns>
             </TableView>
-            <Button text="Delete Selected Debt" onAction="#handleDeleteDebt"/>
         </VBox>
-
+        </VBox>
         </content>
         </ScrollPane>
     </center>
+
 </BorderPane>

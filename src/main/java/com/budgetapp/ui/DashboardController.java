@@ -37,8 +37,12 @@ public class DashboardController {
     @FXML private Label payoffMonthsLabel;
     @FXML private Label payoffInterestLabel;
     @FXML private Label negativeAmortizationLabel;
+    @FXML private Label suggestedPaymentLabel;
+    @FXML private Label payoffDebtNameLabel;
     @FXML private Label dedicatedBillsValueLabel;
+/*
     @FXML private Label subscriptionBillsValueLabel;
+*/
 
 
     // ===== New Input Fields =====
@@ -65,7 +69,7 @@ public class DashboardController {
     @FXML private TableColumn<Debt, BigDecimal> debtRateColumn;
     @FXML private TableColumn<Debt, BigDecimal> debtMinPaymentColumn;
     @FXML private TableColumn<Debt, Recurrence> debtRecurrenceColumn;
-    @FXML private TableColumn<Debt, Integer> debtMonthsColumn;
+    @FXML private TableColumn<Debt, String> debtMonthsColumn;
     @FXML private TableColumn<Debt, String> debtInterestPaidColumn;
     @FXML private TableColumn<Debt, String> debtNegativeAmColumn;
     @FXML private TableColumn<Income, String> incomeReceivedDateColumn;
@@ -97,6 +101,8 @@ public class DashboardController {
             return new BigDecimal(text.trim());
         }
     };
+    private final DebtCalculationService debtCalculationService =
+            new DebtCalculationService();
     private final DedicatedBillCalculationService dedicatedBillCalculationService =
             new DedicatedBillCalculationService();
     private final ObservableList<DedicatedBill> dedicatedBills =
@@ -108,8 +114,6 @@ public class DashboardController {
         expensesValueLabel.setText("$0.00");
         debtPaymentsValueLabel.setText("$0.00");
         remainingCashValueLabel.setText("$0.00");
-
-
 
 
         nameColumn.setCellValueFactory(data ->
@@ -209,12 +213,14 @@ public class DashboardController {
         DebtCalculationService service = new DebtCalculationService();
 
         debtMonthsColumn.setCellValueFactory(data -> {
-            try {
-                PayoffResult result = service.calculatePayoff(data.getValue());
-                return new javafx.beans.property.SimpleObjectProperty<>(result.monthsToPayoff());
-            } catch (Exception e) {
-                return new javafx.beans.property.SimpleObjectProperty<>(null);
+            Debt debt = data.getValue();
+            PayoffResult result = debtCalculationService.calculatePayoff(debt);
+
+            if (result.monthsToPayoff() == -1) {
+                return new SimpleStringProperty("❌");
             }
+
+            return new SimpleStringProperty(result.monthsToPayoff() + " mo");
         });
 
         debtInterestPaidColumn.setCellValueFactory(data -> {
@@ -229,14 +235,14 @@ public class DashboardController {
         });
 
         debtNegativeAmColumn.setCellValueFactory(data -> {
-            try {
-                PayoffResult result = service.calculatePayoff(data.getValue());
-                return new javafx.beans.property.SimpleStringProperty(
-                        result.negativeAmortization() ? "Yes" : "No"
-                );
-            } catch (Exception e) {
-                return new javafx.beans.property.SimpleStringProperty("—");
+            Debt debt = data.getValue();
+            PayoffResult result = debtCalculationService.calculatePayoff(debt);
+
+            if (result.negativeAmortization()) {
+                return new SimpleStringProperty("❌");
             }
+
+            return new SimpleStringProperty("✅");
         });
 
         debts.clear();
@@ -300,7 +306,8 @@ public class DashboardController {
             }
 
         });
-        dedicatedBillNameColumn.setCellValueFactory(data ->
+
+      /*  dedicatedBillNameColumn.setCellValueFactory(data ->
                 new SimpleStringProperty(data.getValue().getName()));
 
         dedicatedBillsTable.setEditable(true);
@@ -327,10 +334,10 @@ public class DashboardController {
             } catch (Exception e) {
                 dedicatedBillsTable.refresh(); // revert bad edit
             }
-        });
+        });*/
 
-        dedicatedBillRecurrenceColumn.setCellValueFactory(data ->
-                new SimpleObjectProperty<>(data.getValue().getRecurrence()));
+       /* dedicatedBillRecurrenceColumn.setCellValueFactory(data ->
+                new SimpleObjectProperty<>(data.getValue().getRecurrence()));*/
         recurrenceColumn.setCellFactory(
                 ComboBoxTableCell.forTableColumn(Recurrence.values())
         );
@@ -343,14 +350,15 @@ public class DashboardController {
             expenseTable.refresh();
             updateTotals();
         });
+    }
 
-        dedicatedBillGroupColumn.setCellValueFactory(data ->
+        /*dedicatedBillGroupColumn.setCellValueFactory(data ->
                 new SimpleObjectProperty<>(data.getValue().getCategory()));
 
         dedicatedBills.clear();
         dedicatedBills.addAll(dedicatedBillDao.findAll());
         dedicatedBillsTable.setItems(dedicatedBills);
-    }
+    }*/
     @FXML
     private void handleDeleteIncome() {
         Income selected = incomeTable.getSelectionModel().getSelectedItem();
@@ -586,16 +594,48 @@ public class DashboardController {
         Debt selected = debtTable.getSelectionModel().getSelectedItem();
 
         if (selected == null) {
-            System.out.println("No debt selected");
+            payoffMonthsLabel.setText("Select a debt first.");
+            payoffInterestLabel.setText("");
+            negativeAmortizationLabel.setText("");
             return;
         }
-
+        payoffDebtNameLabel.setText(
+                "Debt Report: " + selected.getName()
+        );
         DebtCalculationService service = new DebtCalculationService();
         PayoffResult result = service.calculatePayoff(selected);
 
-        System.out.println("Months to payoff: " + result.monthsToPayoff());
-        System.out.println("Total interest: $" + result.totalInterestPaid());
-        System.out.println("Negative amortization: " + result.negativeAmortization());
+        if (result.negativeAmortization()) {
+            payoffMonthsLabel.setText("Will Not Pay Off");
+            payoffInterestLabel.setText("Payment is too low to cover interest.");
+            negativeAmortizationLabel.setText("Balance will continue growing each month.");
+
+        } else {
+            payoffMonthsLabel.setText(result.monthsToPayoff() + " months");
+            payoffInterestLabel.setText("$" + result.totalInterestPaid());
+            negativeAmortizationLabel.setText("Estimated total interest paid.");
+        }
+        BigDecimal balance = selected.getAmount();
+        BigDecimal annualRate = selected.getInterestRate();
+
+        BigDecimal monthlyRate = annualRate
+                .divide(new BigDecimal("100"), 10, RoundingMode.HALF_UP)
+                .divide(new BigDecimal("12"), 10, RoundingMode.HALF_UP);
+
+        BigDecimal monthlyInterest = balance
+                .multiply(monthlyRate)
+                .setScale(2, RoundingMode.HALF_UP);
+
+        BigDecimal principalStarter = balance
+                .multiply(new BigDecimal("0.02"))
+                .setScale(2, RoundingMode.HALF_UP);
+
+        BigDecimal suggestedPayment = monthlyInterest
+                .add(principalStarter)
+                .setScale(2, RoundingMode.HALF_UP);
+        suggestedPaymentLabel.setText(
+                "Suggested starting payment: $" + suggestedPayment
+        );
     }
     private void refreshDebts() {
         debts.clear();
@@ -608,18 +648,18 @@ public class DashboardController {
         BigDecimal totalMonthlyIncome = BigDecimal.ZERO;
         BigDecimal totalMonthlyExpenses = BigDecimal.ZERO;
         BigDecimal totalMonthlyDebtPayments = BigDecimal.ZERO;
-        BigDecimal totalMonthlyDedicatedBills = BigDecimal.ZERO;
+      /*  BigDecimal totalMonthlyDedicatedBills = BigDecimal.ZERO;*/
 
         for (Income income : incomes) {
             if (income.getAmount() != null) {
                 totalMonthlyIncome = totalMonthlyIncome.add(income.getAmount());
             }
         }
-        BigDecimal businessBills =
+       /* BigDecimal businessBills =
                 dedicatedBillCalculationService.totalMonthlyForCategory(
                         dedicatedBills,
                         ExpenseCategory.SUBSCRIPTION
-                );
+                );*/
 
 
 
@@ -630,16 +670,16 @@ public class DashboardController {
             }
         }
 
-        for (DedicatedBill bill : dedicatedBills) {
+       /* for (DedicatedBill bill : dedicatedBills) {
             if (bill.getAmount() != null) {
                 totalMonthlyDedicatedBills =
                         totalMonthlyDedicatedBills.add(bill.getAmount());
             }
-        }
+        }*/
 
         BigDecimal remainingCash = totalMonthlyIncome
                 .subtract(totalMonthlyExpenses)
-                .subtract(totalMonthlyDedicatedBills)
+               /* .subtract(totalMonthlyDedicatedBills)*/
                 .subtract(totalMonthlyDebtPayments);
 
         incomeValueLabel.setText("$" + totalMonthlyIncome.setScale(2, RoundingMode.HALF_UP));
