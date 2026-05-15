@@ -11,6 +11,7 @@ public class Debt {
     private BigDecimal interestRate;
     private BigDecimal minimumPayment;
     private LocalDate nextDueDate;
+    private LocalDate previousNextDueDate;
     private boolean paid;
 
     public Debt(String name, BigDecimal amount, Recurrence recurrence,
@@ -78,6 +79,13 @@ public class Debt {
 
     public void setNextDueDate(LocalDate nextDueDate) {
         this.nextDueDate = nextDueDate;
+    }
+    public LocalDate getPreviousNextDueDate() {
+        return previousNextDueDate;
+    }
+
+    public void setPreviousNextDueDate(LocalDate previousNextDueDate) {
+        this.previousNextDueDate = previousNextDueDate;
     }
 
     public boolean isPaid() {

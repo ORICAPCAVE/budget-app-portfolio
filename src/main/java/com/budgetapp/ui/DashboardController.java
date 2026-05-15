@@ -6,7 +6,6 @@ import com.budgetapp.dao.ExpenseDao;
 import com.budgetapp.dao.IncomeDao;
 import com.budgetapp.model.*;
 import com.budgetapp.service.DebtCalculationService;
-import com.budgetapp.service.DedicatedBillCalculationService;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
@@ -29,7 +28,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
-
+import javafx.application.Platform;
 public class DashboardController {
 
     // ===== Existing Labels =====
@@ -109,8 +108,8 @@ public class DashboardController {
     };
     private final DebtCalculationService debtCalculationService =
             new DebtCalculationService();
-    private final DedicatedBillCalculationService dedicatedBillCalculationService =
-            new DedicatedBillCalculationService();
+   // private final DedicatedBillCalculationService dedicatedBillCalculationService =
+   //         new DedicatedBillCalculationService();
     private final ObservableList<DedicatedBill> dedicatedBills =
             FXCollections.observableArrayList();
     @FXML
@@ -255,6 +254,11 @@ public class DashboardController {
         debts.addAll(debtDao.findAll());
         debtTable.setItems(debts);
         debtTable.setEditable(true);
+
+        Label alertLabel = new Label("❌ Alert!");
+        alertLabel.setStyle("-fx-text-fill: red; -fx-font-weight: bold;");
+        Label goLabel = new Label("✅ Your Making Headway!");
+        goLabel.setStyle("-fx-text-fill: green; -fx-font-weight: bold;");
         Label redLegend = new Label("● Due Soon (< 7 days)");
         redLegend.setStyle("-fx-text-fill: red; -fx-font-weight: bold;");
 
@@ -265,6 +269,8 @@ public class DashboardController {
         greenLegend.setStyle("-fx-text-fill: green; -fx-font-weight: bold;");
 
         debtLegendBox.getChildren().addAll(
+                alertLabel,
+                goLabel,
                 greenLegend,
                 orangeLegend,
                 redLegend
@@ -359,26 +365,46 @@ public class DashboardController {
                 new SimpleBooleanProperty(data.getValue().isPaid())
         );
 
-        debtPaidColumn.setCellFactory(column -> new TableCell<>() {
-            private final Button paidButton = new Button("✓");
+        debtPaidColumn.setCellValueFactory(data ->
+                new SimpleBooleanProperty(data.getValue().isPaid())
+        );
+
+        debtPaidColumn.setCellFactory(column -> new TableCell<Debt, Boolean>() {
+
+            private final Button paidButton = new Button();
 
             {
-                paidButton.setStyle("-fx-text-fill: green; -fx-font-weight: bold;");
-
                 paidButton.setOnAction(e -> {
                     Debt debt = getTableView().getItems().get(getIndex());
 
                     LocalDate currentDueDate = debt.getNextDueDate();
 
-                    if (currentDueDate != null) {
-                        debt.setNextDueDate(currentDueDate.plusMonths(1));
+                    if (!debt.isPaid()) {
+                        if (currentDueDate != null) {
+                            debt.setNextDueDate(currentDueDate.plusMonths(1));
+                        }
+
+                        debt.setPaid(true);
+                    } else {
+                        if (currentDueDate != null) {
+                            debt.setNextDueDate(currentDueDate.minusMonths(1));
+                        }
+
+                        debt.setPaid(false);
                     }
 
-                    debt.setPaid(true);
-
                     debtDao.update(debt);
-                    debtTable.refresh();
-                    updateTotals();
+
+                    paidButton.setText(debt.isPaid() ? "✓" : "□");
+
+                    paidButton.setStyle(debt.isPaid()
+                            ? "-fx-text-fill: green; -fx-font-weight: bold;"
+                            : "-fx-text-fill: gray;"
+                    );
+
+                    int rowIndex = getIndex();
+
+                    debtTable.getItems().set(rowIndex, debt);
                 });
             }
 
@@ -389,6 +415,13 @@ public class DashboardController {
                 if (empty) {
                     setGraphic(null);
                 } else {
+                    paidButton.setText(Boolean.TRUE.equals(paid) ? "✓" : "□");
+
+                    paidButton.setStyle(Boolean.TRUE.equals(paid)
+                            ? "-fx-text-fill: green; -fx-font-weight: bold;"
+                            : "-fx-text-fill: gray;"
+                    );
+
                     setGraphic(paidButton);
                 }
             }
@@ -405,15 +438,39 @@ public class DashboardController {
             expenseTable.refresh();
             updateTotals();
         });
+        debtMonthsColumn.setCellFactory(
+                TextFieldTableCell.forTableColumn()
+        );
+
+        debtMonthsColumn.setOnEditCommit(event -> {
+            Debt debt = event.getRowValue();
+
+            try {
+                int months = Integer.parseInt(event.getNewValue().replace(" mo", "").trim());
+
+                BigDecimal suggestedPayment =
+                        debtCalculationService.calculatePaymentForMonths(debt, months);
+
+                BigDecimal totalInterest =
+                        debtCalculationService.calculateInterestForChosenMonths(debt, months);
+
+                debt.setMinimumPayment(suggestedPayment);
+                debtDao.update(debt);
+
+                debtMinPaymentColumn.setVisible(false);
+                debtMinPaymentColumn.setVisible(true);
+
+                debtInterestPaidColumn.setVisible(false);
+                debtInterestPaidColumn.setVisible(true);
+
+                updateTotals();
+
+            } catch (Exception ex) {
+                showAlert("Enter a valid number of months.");
+            }
+        });
     }
 
-        /*dedicatedBillGroupColumn.setCellValueFactory(data ->
-                new SimpleObjectProperty<>(data.getValue().getCategory()));
-
-        dedicatedBills.clear();
-        dedicatedBills.addAll(dedicatedBillDao.findAll());
-        dedicatedBillsTable.setItems(dedicatedBills);
-    }*/
     @FXML
     private void handleDeleteIncome() {
         Income selected = incomeTable.getSelectionModel().getSelectedItem();
@@ -578,8 +635,8 @@ public class DashboardController {
             debt.setNextDueDate(nextDueDate);
             debt.setPaid(false);
 
-            debtDao.save(debt);
-            refreshDebts();
+            debtDao.update(debt);
+            debtTable.refresh();
             updateTotals();
             stage.close();
         });

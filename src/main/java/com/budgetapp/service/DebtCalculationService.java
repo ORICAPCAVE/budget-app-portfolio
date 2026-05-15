@@ -84,4 +84,36 @@ public class DebtCalculationService {
 
         return new PayoffResult(months, totalInterestPaid, false);
     }
+    public BigDecimal calculatePaymentForMonths(Debt debt, int months) {
+        BigDecimal balance = debt.getAmount();
+
+        if (balance == null || debt.getInterestRate() == null || months <= 0) {
+            return BigDecimal.ZERO;
+        }
+
+        BigDecimal monthlyRateBD = debt.getInterestRate()
+                .divide(new BigDecimal("100"), 10, RoundingMode.HALF_UP)
+                .divide(new BigDecimal("12"), 10, RoundingMode.HALF_UP);
+
+        double principal = balance.doubleValue();
+        double monthlyRate = monthlyRateBD.doubleValue();
+
+        if (monthlyRate == 0) {
+            return balance.divide(new BigDecimal(months), 2, RoundingMode.HALF_UP);
+        }
+
+        double payment = principal * monthlyRate /
+                (1 - Math.pow(1 + monthlyRate, -months));
+
+        return BigDecimal.valueOf(payment).setScale(2, RoundingMode.HALF_UP);
+    }
+    public BigDecimal calculateInterestForChosenMonths(Debt debt, int months) {
+        BigDecimal payment = calculatePaymentForMonths(debt, months);
+
+        BigDecimal totalPaid = payment.multiply(new BigDecimal(months));
+
+        return totalPaid.subtract(debt.getAmount())
+                .setScale(2, RoundingMode.HALF_UP);
+    }
+
 }
